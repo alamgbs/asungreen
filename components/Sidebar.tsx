@@ -9,7 +9,23 @@ interface SidebarProps {
   hour: number;
   onHourChange: (h: number) => void;
   trafficActive: boolean;
+  years: number[];
+  seasons: string[];
+  onYearsChange: (years: number[]) => void;
+  onSeasonsChange: (seasons: string[]) => void;
 }
+
+const SEASON_LABELS: { id: string; label: string }[] = [
+  { id: 'spring', label: 'PRIM' },
+  { id: 'summer', label: 'VER'  },
+  { id: 'autumn', label: 'OTO'  },
+  { id: 'winter', label: 'INV'  },
+];
+
+const AVAILABLE_YEARS: number[] = Array.from(
+  { length: 10 },
+  (_, i) => new Date().getFullYear() - i,
+);
 
 const LAYERS: {
   id: LayerType;
@@ -69,7 +85,23 @@ export default function Sidebar({
   hour,
   onHourChange,
   trafficActive,
+  years,
+  seasons,
+  onYearsChange,
+  onSeasonsChange,
 }: SidebarProps) {
+  function toggleYear(y: number) {
+    if (years.includes(y) && years.length === 1) return;
+    onYearsChange(years.includes(y) ? years.filter(v => v !== y) : [...years, y]);
+  }
+
+  function toggleSeason(s: string) {
+    if (seasons.includes(s) && seasons.length === 1) return;
+    onSeasonsChange(seasons.includes(s) ? seasons.filter(v => v !== s) : [...seasons, s]);
+  }
+
+  const showTemporalFilter = activeLayers.ndvi || activeLayers.soilTemp;
+
   return (
     <aside
       className="absolute left-3 z-40 flex flex-col gap-2 fade-in-up"
@@ -209,6 +241,97 @@ export default function Sidebar({
           );
         })}
       </div>
+
+      {/* ── Temporal filter (ndvi / soilTemp only) ─── */}
+      {showTemporalFilter && (
+        <div className="terminal-panel fade-in-up">
+          <div
+            style={{
+              fontFamily: 'var(--font-pixel)',
+              fontSize: '6px',
+              color: 'var(--neon-green)',
+              textShadow: 'var(--glow-green)',
+              letterSpacing: '0.04em',
+              marginBottom: '10px',
+            }}
+          >
+            &gt; TEMPORAL_FILTER
+          </div>
+
+          {/* Season pills */}
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '9px',
+              color: 'var(--text-muted)',
+              marginBottom: '6px',
+            }}
+          >
+            ESTACION
+          </div>
+          <div className="flex gap-1 flex-wrap" style={{ marginBottom: '10px' }}>
+            {SEASON_LABELS.map(({ id, label }) => {
+              const active = seasons.includes(id);
+              return (
+                <button
+                  key={id}
+                  onClick={() => toggleSeason(id)}
+                  style={{
+                    fontFamily:    'var(--font-pixel)',
+                    fontSize:      '6px',
+                    letterSpacing: '0.04em',
+                    padding:       '3px 6px',
+                    border:        `1px solid ${active ? 'var(--neon-green)' : 'var(--bg-border)'}`,
+                    background:    active ? 'var(--neon-green)22' : 'transparent',
+                    color:         active ? 'var(--neon-green)' : 'var(--text-muted)',
+                    textShadow:    active ? 'var(--glow-green)' : 'none',
+                    cursor:        'pointer',
+                    transition:    'all 0.15s',
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Year pills */}
+          <div
+            style={{
+              fontFamily:   'var(--font-mono)',
+              fontSize:     '9px',
+              color:        'var(--text-muted)',
+              marginBottom: '6px',
+            }}
+          >
+            AÑO
+          </div>
+          <div className="flex gap-1 flex-wrap">
+            {AVAILABLE_YEARS.map((y) => {
+              const active = years.includes(y);
+              return (
+                <button
+                  key={y}
+                  onClick={() => toggleYear(y)}
+                  style={{
+                    fontFamily:  'var(--font-data)',
+                    fontSize:    '11px',
+                    padding:     '2px 5px',
+                    border:      `1px solid ${active ? 'var(--neon-green)' : 'var(--bg-border)'}`,
+                    background:  active ? 'var(--neon-green)22' : 'transparent',
+                    color:       active ? 'var(--neon-green)' : 'var(--text-muted)',
+                    textShadow:  active ? 'var(--glow-green)' : 'none',
+                    cursor:      'pointer',
+                    transition:  'all 0.15s',
+                  }}
+                >
+                  {y}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Time slider (traffic only) ──────────────── */}
       {trafficActive && (
