@@ -90,6 +90,7 @@ function currentSeason(): string {
 type GeeValue = {
   constantValue?: unknown;
   functionInvocationValue?: { functionName: string; arguments: Record<string, GeeValue> };
+  arrayValue?: { values: GeeValue[] };
 };
 
 interface GeeExpression { result: string; values: Record<string, GeeValue> }
@@ -102,8 +103,12 @@ function invoke(fn: string, args: Record<string, GeeValue>): GeeValue {
   return { functionInvocationValue: { functionName: fn, arguments: args } };
 }
 
+function arr(values: GeeValue[]): GeeValue {
+  return { arrayValue: { values } };
+}
+
 // Builds Filter.and(gte, lt) for one date range, or Filter.or of N ranges.
-// GEE variadic functions use positional arg names: filter1, filter2, ...filterN.
+// GEE REST API: Filter.and and Filter.or take a 'filters' arrayValue argument.
 function buildDateFilter(years: number[], seasons: string[]): GeeValue {
   const ranges: GeeValue[] = [];
 
@@ -114,14 +119,16 @@ function buildDateFilter(years: number[], seasons: string[]): GeeValue {
       const [start, end] = fn(year);
       ranges.push(
         invoke('Filter.and', {
-          filter1: invoke('Filter.gte', {
-            leftField:  constant('system:time_start'),
-            rightValue: constant(new Date(start).getTime()),
-          }),
-          filter2: invoke('Filter.lt', {
-            leftField:  constant('system:time_start'),
-            rightValue: constant(new Date(end).getTime()),
-          }),
+          filters: arr([
+            invoke('Filter.gte', {
+              leftField:  constant('system:time_start'),
+              rightValue: constant(new Date(start).getTime()),
+            }),
+            invoke('Filter.lt', {
+              leftField:  constant('system:time_start'),
+              rightValue: constant(new Date(end).getTime()),
+            }),
+          ]),
         })
       );
     }
@@ -133,9 +140,7 @@ function buildDateFilter(years: number[], seasons: string[]): GeeValue {
 
   if (ranges.length === 1) return ranges[0];
 
-  const orArgs: Record<string, GeeValue> = {};
-  ranges.forEach((r, i) => { orArgs[`filter${i + 1}`] = r; });
-  return invoke('Filter.or', orArgs);
+  return invoke('Filter.or', { filters: arr(ranges) });
 }
 
 // ── NDVI: Sentinel-2 SR Harmonized, 10m ──────────────────────────────────
