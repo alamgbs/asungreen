@@ -1,7 +1,7 @@
 /**
  * POST /api/gee-map
- * Body: { layer: 'ndvi' | 'soilTemp', years?: number[], seasons?: string[] }
- * Returns: { tileBaseUrl: string, token: string }
+ * Body: { layer: 'ndvi' | 'soilTemp', years?: number[], seasons?: string[], aoiId?: string }
+ * Returns: { tileBaseUrl: string, token: string, min: number, max: number }
  *
  * Builds a GEE median composite from Sentinel-2 (NDVI 10m) or
  * Landsat 8+9 merged (LST 30m), filtered by Southern Hemisphere seasons.
