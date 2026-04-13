@@ -3,8 +3,8 @@
 // Geometries are simplified rectangular approximations of GADM administrative
 // boundaries. Replace coordinates with actual GADM data for higher fidelity.
 
-type GeoJsonPolygon = { type: 'Polygon'; coordinates: number[][][] };
-type GeoJsonMultiPolygon = { type: 'MultiPolygon'; coordinates: number[][][][] };
+export type GeoJsonPolygon = { type: 'Polygon'; coordinates: number[][][] };
+export type GeoJsonMultiPolygon = { type: 'MultiPolygon'; coordinates: number[][][][] };
 
 export interface Aoi {
   id:       string;
