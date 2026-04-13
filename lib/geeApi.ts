@@ -1,8 +1,14 @@
 /**
  * GEE tile URL client.
- * Calls /api/gee-map (server-side proxy) to get a tile base URL + token.
- * Cache key includes layer + years + seasons so changing filters re-fetches.
+ * Calls /api/gee-map (server-side proxy) to get a tile base URL + token + stats.
+ * Cache key includes layer + years + seasons + aoiId.
  */
+
+export interface GeeLayerResult {
+  tileBaseUrl: string;
+  min:         number;
+  max:         number;
+}
 
 /** Populated by getGeeTileUrl(). Read by MapView.transformRequest. */
 export const geeTileUrlCache: Partial<Record<'ndvi' | 'soilTemp', string>> = {};
@@ -13,29 +19,33 @@ export const geeTileUrlCache: Partial<Record<'ndvi' | 'soilTemp', string>> = {};
  */
 export const geeTileTokenCache: Partial<Record<'ndvi' | 'soilTemp', string>> = {};
 
-// Tracks which year+season combo produced the cached URL.
+// Tracks which param combo produced the cached URL.
 const geeParamCache: Partial<Record<'ndvi' | 'soilTemp', string>> = {};
+// Caches the full result (including min/max) by the same key.
+const geeResultCache: Partial<Record<'ndvi' | 'soilTemp', GeeLayerResult>> = {};
 
 /**
- * Calls /api/gee-map to create a GEE visualization map for the given layer,
- * years, and seasons. Returns the tile base URL.
- * Cached: if the same layer+years+seasons combo was already fetched this
- * session, returns the cached URL without a new API call.
+ * Calls /api/gee-map to create a GEE visualization map.
+ * Returns { tileBaseUrl, min, max }.
+ * Cached: if the same layer+years+seasons+aoiId combo was already fetched
+ * this session, returns the cached result without a new API call.
  */
 export async function getGeeTileUrl(
-  layer: 'ndvi' | 'soilTemp',
-  years: number[],
+  layer:   'ndvi' | 'soilTemp',
+  years:   number[],
   seasons: string[],
-): Promise<string> {
-  const key = `${[...years].sort().join(',')}|${[...seasons].sort().join(',')}`;
-  if (geeTileUrlCache[layer] && geeParamCache[layer] === key) {
-    return geeTileUrlCache[layer]!;
+  aoiId?:  string,
+): Promise<GeeLayerResult> {
+  const key = `${[...years].sort().join(',')}|${[...seasons].sort().join(',')}|${aoiId ?? 'global'}`;
+
+  if (geeParamCache[layer] === key && geeResultCache[layer]) {
+    return geeResultCache[layer]!;
   }
 
   const res = await fetch('/api/gee-map', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ layer, years, seasons }),
+    body: JSON.stringify({ layer, years, seasons, ...(aoiId ? { aoiId } : {}) }),
   });
 
   if (!res.ok) {
@@ -43,9 +53,13 @@ export async function getGeeTileUrl(
     throw new Error(`GEE proxy error: ${data.error ?? res.status}`);
   }
 
-  const data = (await res.json()) as { tileBaseUrl: string; token: string };
+  const data = (await res.json()) as { tileBaseUrl: string; token: string; min: number; max: number };
+  const result: GeeLayerResult = { tileBaseUrl: data.tileBaseUrl, min: data.min, max: data.max };
+
   geeTileUrlCache[layer]   = data.tileBaseUrl;
   geeTileTokenCache[layer] = data.token;
   geeParamCache[layer]     = key;
-  return data.tileBaseUrl;
+  geeResultCache[layer]    = result;
+
+  return result;
 }
