@@ -91,6 +91,7 @@ type GeeValue = {
   constantValue?: unknown;
   functionInvocationValue?: { functionName: string; arguments: Record<string, GeeValue> };
   arrayValue?: { values: GeeValue[] };
+  geoJsonGeometry?: { type: string; coordinates: unknown };
 };
 
 interface GeeExpression { result: string; values: Record<string, GeeValue> }
@@ -106,6 +107,28 @@ function invoke(fn: string, args: Record<string, GeeValue>): GeeValue {
 function arr(values: GeeValue[]): GeeValue {
   return { arrayValue: { values } };
 }
+
+/** Wraps a GeoJSON geometry object as a GEE geoJsonGeometry value node. */
+function buildGeometry(geojson: { type: string; coordinates: unknown }): GeeValue {
+  return { geoJsonGeometry: geojson };
+}
+
+// ── LST DN → Celsius conversion ──────────────────────────────────────────
+// Landsat Collection 2 Level-2 ST_B10 scale factor: 0.00341802, offset: 149.0
+const lstDnToCelsius = (dn: number): number => dn * 0.00341802 + 149.0 - 273.15;
+
+// ── Visualization min/max constants ──────────────────────────────────────
+// VIZ_DEFAULTS: raw values passed to GEE Image.visualize
+// DISPLAY_DEFAULTS: human-readable values returned in the API response
+const VIZ_DEFAULTS = {
+  ndvi:     { min: -0.2,  max: 0.8   },
+  soilTemp: { min: 40713, max: 50947 }, // raw ST_B10 DN
+} as const;
+
+const DISPLAY_DEFAULTS = {
+  ndvi:     { min: -0.2,  max: 0.8   },
+  soilTemp: { min: lstDnToCelsius(40713), max: lstDnToCelsius(50947) }, // °C ≈ 14.9 / 49.9
+} as const;
 
 // Builds Filter.and(gte, lt) for one date range, or Filter.or of N ranges.
 // GEE REST API: Filter.and and Filter.or take a 'filters' arrayValue argument.
@@ -144,9 +167,8 @@ function buildDateFilter(years: number[], seasons: string[]): GeeValue {
 }
 
 // ── NDVI: Sentinel-2 SR Harmonized, 10m ──────────────────────────────────
-// date+cloud filter → select B4+B8 → median → normalizedDifference → visualize
-// Note: Image.normalizedDifference uses 'input' (not 'image') in GEE REST API.
-function ndviExpression(years: number[], seasons: string[]): GeeExpression {
+// Returns the pre-visualize NDVI image node (normalizedDifference result).
+function buildNdviImage(years: number[], seasons: string[]): GeeValue {
   const dateFilter  = buildDateFilter(years, seasons);
   const cloudFilter = invoke('Filter.lt', {
     leftField:  constant('CLOUDY_PIXEL_PERCENTAGE'),
@@ -163,10 +185,8 @@ function ndviExpression(years: number[], seasons: string[]): GeeExpression {
     filter: cloudFilter,
   });
 
-  // Select only B4 (Red) and B8 (NIR) before reducing so median image
-  // has exactly ['B4_median', 'B8_median'] — avoids band-count issues.
   const selected = invoke('ImageCollection.select', {
-    collection:   filtered,
+    collection:    filtered,
     bandSelectors: constant(['B4', 'B8']),
   });
 
@@ -175,25 +195,40 @@ function ndviExpression(years: number[], seasons: string[]): GeeExpression {
     reducer:    invoke('Reducer.median', {}),
   });
 
-  // GEE REST API: Image.normalizedDifference takes 'input' for the image argument.
-  const ndvi = invoke('Image.normalizedDifference', {
+  // GEE REST API: Image.normalizedDifference uses 'input' (not 'image').
+  return invoke('Image.normalizedDifference', {
     input:     median,
     bandNames: constant(['B8_median', 'B4_median']),
   });
+}
 
-  const visualized = invoke('Image.visualize', {
-    image:   ndvi,
-    min:     constant(-0.2),
-    max:     constant(0.8),
-    palette: constant(['ff2d78', 'ffe600', '00ff88', '00a855', '004d22']),
-  });
-
-  return { result: 'result', values: { result: visualized } };
+// Wraps NDVI image with optional clip + visualize.
+// geometry: if provided, clips the image to that AOI before visualizing.
+function visualizeNdvi(
+  image:     GeeValue,
+  min:       number,
+  max:       number,
+  geometry?: GeeValue,
+): GeeExpression {
+  const src = geometry
+    ? invoke('Image.clip', { input: image, geometry })
+    : image;
+  return {
+    result: 'result',
+    values: {
+      result: invoke('Image.visualize', {
+        image:   src,
+        min:     constant(min),
+        max:     constant(max),
+        palette: constant(['ff2d78', 'ffe600', '00ff88', '00a855', '004d22']),
+      }),
+    },
+  };
 }
 
 // ── LST: Landsat 8+9 Collection 2 Level-2, 30m ───────────────────────────
-// merge LC08+LC09 → date+cloud filter → median → ST_B10_median → visualize
-function lstExpression(years: number[], seasons: string[]): GeeExpression {
+// Returns the pre-visualize LST median composite image node.
+function buildLstImage(years: number[], seasons: string[]): GeeValue {
   const dateFilter  = buildDateFilter(years, seasons);
   const cloudFilter = invoke('Filter.lt', {
     leftField:  constant('CLOUD_COVER'),
@@ -213,20 +248,35 @@ function lstExpression(years: number[], seasons: string[]): GeeExpression {
     filter: cloudFilter,
   });
 
-  const median = invoke('ImageCollection.reduce', {
+  return invoke('ImageCollection.reduce', {
     collection: filtered,
     reducer:    invoke('Reducer.median', {}),
   });
+}
 
-  const visualized = invoke('Image.visualize', {
-    image:   median,
-    bands:   constant(['ST_B10_median']),
-    min:     constant(40713),
-    max:     constant(50947),
-    palette: constant(['001aff', '00e5ff', 'ffe600', 'ff7c00', 'ff2d78']),
-  });
-
-  return { result: 'result', values: { result: visualized } };
+// Wraps LST image with optional clip + visualize.
+// min/max are raw ST_B10 DN values (not °C) for GEE Image.visualize.
+function visualizeLst(
+  image:     GeeValue,
+  min:       number,
+  max:       number,
+  geometry?: GeeValue,
+): GeeExpression {
+  const src = geometry
+    ? invoke('Image.clip', { input: image, geometry })
+    : image;
+  return {
+    result: 'result',
+    values: {
+      result: invoke('Image.visualize', {
+        image:   src,
+        bands:   constant(['ST_B10_median']),
+        min:     constant(min),
+        max:     constant(max),
+        palette: constant(['001aff', '00e5ff', 'ffe600', 'ff7c00', 'ff2d78']),
+      }),
+    },
+  };
 }
 
 export async function POST(request: Request) {
@@ -258,11 +308,16 @@ export async function POST(request: Request) {
       }
     }
 
-    const sa         = loadServiceAccount();
-    const token      = await getAccessToken(sa);
+    const sa    = loadServiceAccount();
+    const token = await getAccessToken(sa);
+
+    const image = layer === 'ndvi'
+      ? buildNdviImage(years, seasons)
+      : buildLstImage(years, seasons);
+
     const expression = layer === 'ndvi'
-      ? ndviExpression(years, seasons)
-      : lstExpression(years, seasons);
+      ? visualizeNdvi(image, VIZ_DEFAULTS.ndvi.min, VIZ_DEFAULTS.ndvi.max)
+      : visualizeLst(image, VIZ_DEFAULTS.soilTemp.min, VIZ_DEFAULTS.soilTemp.max);
 
     const res = await fetch(`${GEE_V1}/projects/${sa.project_id}/maps`, {
       method: 'POST',
@@ -281,8 +336,11 @@ export async function POST(request: Request) {
     const data = (await res.json()) as { name: string };
     const tileBaseUrl = `${GEE_V1}/${data.name}/tiles`;
 
-    return NextResponse.json({ tileBaseUrl, token }, {
-      headers: { 'Cache-Control': 'private, max-age=3000' }, // 50 min — GEE tile maps expire in ~1 hour
+    const displayMin = DISPLAY_DEFAULTS[layer].min;
+    const displayMax = DISPLAY_DEFAULTS[layer].max;
+
+    return NextResponse.json({ tileBaseUrl, token, min: displayMin, max: displayMax }, {
+      headers: { 'Cache-Control': 'private, max-age=3000' },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
