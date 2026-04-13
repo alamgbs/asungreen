@@ -1,23 +1,39 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import Legend from './Legend';
+import StatusBar from './StatusBar';
 import type { LayerType } from '@/lib/types';
+import { INITIAL_VIEW_STATE } from '@/lib/constants';
 
-// Dynamic import to avoid SSR issues with MapLibre/Deck.gl
 const MapView = dynamic(() => import('./MapView'), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center w-full h-full">
       <div className="flex flex-col items-center gap-4">
         <div
-          className="w-16 h-16 rounded-full border-2 border-t-transparent animate-spin"
-          style={{ borderColor: '#10b981', borderTopColor: 'transparent' }}
+          style={{
+            width: '40px',
+            height: '40px',
+            border: '2px solid var(--neon-green)',
+            borderTopColor: 'transparent',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+          }}
         />
-        <p className="text-sm text-[#6b7280]">Cargando mapa…</p>
+        <p
+          style={{
+            fontFamily: 'var(--font-pixel)',
+            fontSize: '7px',
+            color: 'var(--neon-green)',
+            textShadow: 'var(--glow-green)',
+          }}
+        >
+          CARGANDO_MAPA...
+        </p>
       </div>
     </div>
   ),
@@ -30,17 +46,30 @@ export default function MapClient() {
     ndvi: false,
   });
   const [hour, setHour] = useState(8);
+  const [coords, setCoords] = useState({
+    lat: INITIAL_VIEW_STATE.latitude,
+    lng: INITIAL_VIEW_STATE.longitude,
+    zoom: INITIAL_VIEW_STATE.zoom,
+  });
 
-  const toggleLayer = (id: LayerType) => {
+  const toggleLayer = (id: LayerType) =>
     setActiveLayers((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
+
+  const handleCoordsChange = useCallback(
+    (lat: number, lng: number, zoom: number) => setCoords({ lat, lng, zoom }),
+    []
+  );
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-[#050a07]">
-      {/* Full-screen map */}
-      <MapView activeLayers={activeLayers} hour={hour} />
-
-      {/* UI overlay */}
+    <div
+      className="relative w-full h-screen overflow-hidden"
+      style={{ background: 'var(--bg-base)' }}
+    >
+      <MapView
+        activeLayers={activeLayers}
+        hour={hour}
+        onCoordsChange={handleCoordsChange}
+      />
       <Header />
       <Sidebar
         activeLayers={activeLayers}
@@ -50,6 +79,7 @@ export default function MapClient() {
         trafficActive={activeLayers.traffic}
       />
       <Legend activeLayers={activeLayers} />
+      <StatusBar lat={coords.lat} lng={coords.lng} zoom={coords.zoom} />
     </div>
   );
 }

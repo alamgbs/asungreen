@@ -1,6 +1,6 @@
 'use client';
 
-import { Thermometer, Car, TreePine, ChevronRight, Info } from 'lucide-react';
+import { Thermometer, Car, TreePine } from 'lucide-react';
 import type { LayerType } from '@/lib/types';
 
 interface SidebarProps {
@@ -15,41 +15,39 @@ const LAYERS: {
   id: LayerType;
   name: string;
   subtitle: string;
+  source: string;
   icon: React.ReactNode;
   color: string;
-  source: string;
 }[] = [
   {
     id: 'soilTemp',
-    name: 'Temperatura del Suelo',
-    subtitle: 'MODIS MOD11A1 · LST',
-    icon: <Thermometer size={16} />,
-    color: '#f97316',
-    source: 'NASA MODIS Terra',
+    name: 'TEMPERATURA',
+    subtitle: 'MODIS·MOD11A1·LST',
+    source: 'NASA TERRA · 1km',
+    icon: <Thermometer size={13} />,
+    color: 'var(--neon-orange)',
   },
   {
     id: 'traffic',
-    name: 'Flujo de Tráfico',
-    subtitle: 'Simulación · OSM Roads',
-    icon: <Car size={16} />,
-    color: '#14b8a6',
-    source: 'Datos Simulados',
+    name: 'TRAFICO',
+    subtitle: 'SIMULACION·OSM',
+    source: 'DATOS SIMULADOS',
+    icon: <Car size={13} />,
+    color: 'var(--neon-cyan)',
   },
   {
     id: 'ndvi',
-    name: 'Índice de Vegetación',
-    subtitle: 'NDVI · Sentinel-2',
-    icon: <TreePine size={16} />,
-    color: '#10b981',
-    source: 'NASA MODIS Terra',
+    name: 'VEGETACION',
+    subtitle: 'NDVI·MODIS·250m',
+    source: 'NASA TERRA · 250m',
+    icon: <TreePine size={13} />,
+    color: 'var(--neon-green)',
   },
 ];
 
-const HOUR_LABELS: Record<number, string> = {
-  0: 'Medianoche', 6: '6 AM', 7: 'Hora pico', 8: 'Hora pico',
-  9: '9 AM', 12: 'Mediodía', 17: 'Hora pico', 18: 'Hora pico',
-  19: 'Hora pico', 22: '10 PM', 23: 'Noche',
-};
+function pad(n: number) {
+  return String(n + 1).padStart(2, '0');
+}
 
 function formatHour(h: number): string {
   if (h === 0) return '00:00';
@@ -57,6 +55,13 @@ function formatHour(h: number): string {
   const display = h <= 12 ? h : h - 12;
   return `${display}:00 ${period}`;
 }
+
+const TRAFFIC_BY_HOUR = [
+  0.05, 0.03, 0.02, 0.02, 0.03, 0.10,
+  0.30, 0.70, 0.95, 0.80, 0.60, 0.55,
+  0.55, 0.58, 0.60, 0.65, 0.78, 0.98,
+  0.92, 0.75, 0.58, 0.40, 0.22, 0.10,
+];
 
 export default function Sidebar({
   activeLayers,
@@ -67,89 +72,137 @@ export default function Sidebar({
 }: SidebarProps) {
   return (
     <aside
-      className="absolute left-4 top-16 bottom-4 z-40 w-72 flex flex-col gap-3 fade-in-up"
-      style={{ top: '72px' }}
+      className="absolute left-3 z-40 flex flex-col gap-2 fade-in-up"
+      style={{ top: '56px', bottom: '36px', width: '268px' }}
     >
-      {/* Title */}
-      <div className="glass rounded-xl px-4 py-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-semibold tracking-widest uppercase text-[#6b7280]">
-            Capas del Mapa
-          </h2>
-          <ChevronRight size={14} className="text-[#10b981]" />
+      {/* ── System header ──────────────────────────── */}
+      <div className="terminal-panel">
+        <div
+          style={{
+            fontFamily: 'var(--font-pixel)',
+            fontSize: '7px',
+            color: 'var(--neon-green)',
+            textShadow: 'var(--glow-green)',
+            letterSpacing: '0.05em',
+          }}
+        >
+          MAP_LAYERS.SH
         </div>
-        <p className="text-[10px] text-[#4b5563] mt-1">
-          Departamento Central · Asunción, Paraguay
+        <p
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '10px',
+            color: 'var(--text-muted)',
+            marginTop: '5px',
+          }}
+        >
+          DEPT·CENTRAL · ASU · PY
         </p>
       </div>
 
-      {/* Layer cards */}
-      <div className="flex flex-col gap-2">
-        {LAYERS.map((layer) => {
+      {/* ── Layer cards ────────────────────────────── */}
+      <div className="flex flex-col gap-1.5">
+        {LAYERS.map((layer, i) => {
           const isActive = activeLayers[layer.id];
           return (
             <button
               key={layer.id}
               onClick={() => onToggleLayer(layer.id)}
-              className={`glass rounded-xl px-4 py-3.5 text-left transition-all duration-200 glass-hover cursor-pointer ${
-                isActive ? 'layer-card-active' : ''
-              }`}
-              style={{ outline: 'none' }}
+              className="terminal-panel-btn"
+              style={{
+                borderColor: isActive ? layer.color : 'var(--bg-border)',
+                boxShadow: isActive ? `0 0 10px ${layer.color}33` : 'none',
+              }}
             >
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200"
-                    style={{
-                      background: isActive
-                        ? `${layer.color}22`
-                        : 'rgba(75,85,99,0.2)',
-                      color: isActive ? layer.color : '#6b7280',
-                      border: `1px solid ${isActive ? layer.color + '44' : 'transparent'}`,
-                    }}
-                  >
+              {/* Row number */}
+              <div
+                style={{
+                  fontFamily: 'var(--font-pixel)',
+                  fontSize: '6px',
+                  color: isActive ? layer.color : 'var(--text-muted)',
+                  marginBottom: '7px',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {pad(i)} ──────────────────────
+              </div>
+
+              {/* Main row */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span style={{ color: isActive ? layer.color : 'var(--text-muted)' }}>
                     {layer.icon}
-                  </div>
+                  </span>
                   <div>
-                    <p
-                      className="text-sm font-medium leading-tight"
-                      style={{ color: isActive ? '#f0fdf4' : '#9ca3af' }}
+                    <div
+                      style={{
+                        fontFamily: 'var(--font-pixel)',
+                        fontSize: '7px',
+                        color: isActive ? 'var(--text-bright)' : 'var(--text-muted)',
+                        textShadow: isActive ? `0 0 8px ${layer.color}` : 'none',
+                        letterSpacing: '0.04em',
+                      }}
                     >
                       {layer.name}
-                    </p>
-                    <p className="text-[10px] text-[#4b5563] mt-0.5">{layer.subtitle}</p>
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '10px',
+                        color: isActive ? `${layer.color}cc` : 'var(--bg-border)',
+                        marginTop: '2px',
+                      }}
+                    >
+                      {layer.subtitle}
+                    </div>
                   </div>
                 </div>
 
-                {/* Toggle */}
+                {/* Neon toggle */}
                 <div
-                  className="w-10 h-5 rounded-full relative transition-all duration-300 flex-shrink-0"
                   style={{
+                    width: '36px',
+                    height: '16px',
+                    borderRadius: '1px',
+                    position: 'relative',
                     background: isActive
-                      ? `linear-gradient(to right, ${layer.color}, ${layer.color}cc)`
-                      : 'rgba(55,65,81,0.8)',
-                    boxShadow: isActive ? `0 0 8px ${layer.color}66` : 'none',
+                      ? `linear-gradient(90deg, ${layer.color}99, ${layer.color})`
+                      : 'rgba(13,43,18,0.6)',
+                    border: `1px solid ${isActive ? layer.color : 'var(--bg-border)'}`,
+                    boxShadow: isActive ? `0 0 6px ${layer.color}88` : 'none',
+                    transition: 'all 0.2s',
+                    flexShrink: 0,
                   }}
                 >
                   <div
-                    className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all duration-300"
                     style={{
-                      left: isActive ? '22px' : '2px',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                      position: 'absolute',
+                      top: '2px',
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '1px',
+                      background: '#fff',
+                      left: isActive ? '23px' : '2px',
+                      transition: 'left 0.2s',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.6)',
                     }}
                   />
                 </div>
               </div>
 
+              {/* Source line when active */}
               {isActive && (
                 <div
-                  className="flex items-center gap-1 mt-2 pt-2"
-                  style={{ borderTop: '1px solid rgba(16,185,129,0.12)' }}
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '10px',
+                    color: `${layer.color}99`,
+                    marginTop: '7px',
+                    paddingTop: '6px',
+                    borderTop: `1px solid ${layer.color}22`,
+                  }}
                 >
-                  <Info size={10} style={{ color: layer.color }} />
-                  <span className="text-[10px]" style={{ color: layer.color + 'cc' }}>
-                    {layer.source}
-                  </span>
+                  &gt; {layer.source} · ACTIVE
                 </div>
               )}
             </button>
@@ -157,24 +210,31 @@ export default function Sidebar({
         })}
       </div>
 
-      {/* Time slider — only when traffic is active */}
+      {/* ── Time slider (traffic only) ──────────────── */}
       {trafficActive && (
-        <div className="glass rounded-xl px-4 py-4 fade-in-up">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Car size={13} className="text-[#14b8a6]" />
-              <span className="text-xs font-semibold text-[#a7f3d0]">Hora del Día</span>
-            </div>
+        <div className="terminal-panel fade-in-up">
+          <div className="flex items-center justify-between" style={{ marginBottom: '10px' }}>
             <div
-              className="px-2.5 py-0.5 rounded-full text-xs font-bold"
               style={{
-                background: 'rgba(20,184,166,0.15)',
-                color: '#14b8a6',
-                border: '1px solid rgba(20,184,166,0.3)',
+                fontFamily: 'var(--font-pixel)',
+                fontSize: '6px',
+                color: 'var(--neon-cyan)',
+                textShadow: 'var(--glow-cyan)',
+                letterSpacing: '0.04em',
+              }}
+            >
+              HORA_DEL_DIA
+            </div>
+            <span
+              style={{
+                fontFamily: 'var(--font-data)',
+                fontSize: '18px',
+                color: 'var(--neon-cyan)',
+                textShadow: 'var(--glow-cyan)',
               }}
             >
               {formatHour(hour)}
-            </div>
+            </span>
           </div>
 
           <input
@@ -183,10 +243,17 @@ export default function Sidebar({
             max={23}
             value={hour}
             onChange={(e) => onHourChange(Number(e.target.value))}
-            className="time-slider"
+            className="neon-slider"
           />
 
-          <div className="flex justify-between mt-2 text-[10px] text-[#4b5563]">
+          <div
+            className="flex justify-between mt-2"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '9px',
+              color: 'var(--text-muted)',
+            }}
+          >
             <span>00:00</span>
             <span>06:00</span>
             <span>12:00</span>
@@ -194,60 +261,78 @@ export default function Sidebar({
             <span>23:00</span>
           </div>
 
-          <TrafficDensityBar hour={hour} />
+          <TrafficBar hour={hour} />
         </div>
       )}
 
-      {/* Footer */}
+      {/* ── Footer ─────────────────────────────────── */}
       <div
-        className="glass rounded-xl px-4 py-3 mt-auto"
-        style={{ borderColor: 'rgba(16,185,129,0.1)' }}
+        className="terminal-panel mt-auto"
+        style={{ borderColor: 'transparent' }}
       >
-        <p className="text-[10px] text-[#4b5563] text-center">
-          © 2025 AsunGreen · Datos NASA / GEE / OSM
+        <p
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '9px',
+            color: 'var(--text-muted)',
+            textAlign: 'center',
+          }}
+        >
+          © 2025 ASUNGREEN · NASA/GEE/OSM
         </p>
       </div>
     </aside>
   );
 }
 
-function TrafficDensityBar({ hour }: { hour: number }) {
-  const TRAFFIC_BY_HOUR = [
-    0.05, 0.03, 0.02, 0.02, 0.03, 0.10,
-    0.30, 0.70, 0.95, 0.80, 0.60, 0.55,
-    0.55, 0.58, 0.60, 0.65, 0.78, 0.98,
-    0.92, 0.75, 0.58, 0.40, 0.22, 0.10,
-  ];
+function TrafficBar({ hour }: { hour: number }) {
   const density = TRAFFIC_BY_HOUR[hour] ?? 0;
-  const isPeak = density >= 0.85;
-  const isHigh = density >= 0.6;
+  const isPeak  = density >= 0.85;
+  const isHigh  = density >= 0.6;
+  const color   = isPeak
+    ? 'var(--neon-magenta)'
+    : isHigh
+    ? 'var(--neon-yellow)'
+    : 'var(--neon-cyan)';
+  const label   = isPeak ? 'PICO' : isHigh ? 'ALTO' : 'NORMAL';
 
   return (
-    <div className="mt-3">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] text-[#6b7280]">Densidad de tráfico</span>
+    <div style={{ marginTop: '10px' }}>
+      <div className="flex items-center justify-between" style={{ marginBottom: '5px' }}>
         <span
-          className="text-[10px] font-bold"
           style={{
-            color: isPeak ? '#ef4444' : isHigh ? '#f97316' : '#14b8a6',
+            fontFamily: 'var(--font-mono)',
+            fontSize: '9px',
+            color: 'var(--text-muted)',
           }}
         >
-          {isPeak ? '🔴 Pico' : isHigh ? '🟡 Alto' : '🟢 Normal'}
+          DENSIDAD:
+        </span>
+        <span
+          style={{
+            fontFamily: 'var(--font-pixel)',
+            fontSize: '6px',
+            color,
+            textShadow: `0 0 8px ${color}`,
+          }}
+        >
+          {label}
         </span>
       </div>
       <div
-        className="h-2 rounded-full overflow-hidden"
-        style={{ background: 'rgba(55,65,81,0.5)' }}
+        style={{
+          height: '3px',
+          background: 'var(--bg-border)',
+          borderRadius: '0',
+        }}
       >
         <div
-          className="h-full rounded-full transition-all duration-500"
           style={{
+            height: '100%',
             width: `${density * 100}%`,
-            background: isPeak
-              ? 'linear-gradient(to right, #f97316, #ef4444)'
-              : isHigh
-              ? 'linear-gradient(to right, #eab308, #f97316)'
-              : 'linear-gradient(to right, #10b981, #14b8a6)',
+            background: color,
+            boxShadow: `0 0 6px ${color}`,
+            transition: 'width 0.4s ease',
           }}
         />
       </div>
