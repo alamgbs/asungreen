@@ -6,7 +6,7 @@ import { ScatterplotLayer } from '@deck.gl/layers';
 import { Deck } from '@deck.gl/core';
 import type { LayerType } from '@/lib/types';
 import { INITIAL_VIEW_STATE, NASA_GIBS } from '@/lib/constants';
-import { initParticles, updateParticles, particleColor, particleRadius } from '@/lib/trafficSim';
+import { initParticles, updateParticles, particleColor } from '@/lib/trafficSim';
 import type { TrafficParticle } from '@/lib/types';
 import { applyNeonTheme } from '@/lib/mapStyle';
 
@@ -41,11 +41,13 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
+    map.on('styleimagemissing', (e) => {
+      map.addImage(e.id, { width: 1, height: 1, data: new Uint8Array(4) });
+    });
+
     map.on('load', () => {
-      // Apply neon terminal palette over OpenFreeMap dark style
       applyNeonTheme(map);
 
-      // NASA GIBS: Soil Temperature (WMS — supports EPSG:3857 bbox)
       map.addSource('soil-temp-source', {
         type: 'raster',
         tiles: [NASA_GIBS.soilTemp.url],
@@ -59,7 +61,6 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
         paint: { 'raster-opacity': 0 },
       });
 
-      // NASA GIBS: NDVI (WMS — supports EPSG:3857 bbox)
       map.addSource('ndvi-source', {
         type: 'raster',
         tiles: [NASA_GIBS.ndvi.url],
@@ -73,11 +74,18 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
         paint: { 'raster-opacity': 0 },
       });
 
+      // Fix Bug 1: apply initial opacities here, not in a separate effect.
+      // mapReadyRef is a ref so React never re-renders when it changes,
+      // meaning the external effect that syncs opacities never fires after load.
+      map.setPaintProperty('soil-temp-layer', 'raster-opacity',
+        activeLayers.soilTemp ? 0.75 : 0);
+      map.setPaintProperty('ndvi-layer', 'raster-opacity',
+        activeLayers.ndvi ? 0.78 : 0);
+
       mapRef.current = map;
       mapReadyRef.current = true;
     });
 
-    // Live coordinate broadcast for StatusBar
     map.on('mousemove', (e) => {
       onCoordsChange?.(e.lngLat.lat, e.lngLat.lng, map.getZoom());
     });
@@ -89,7 +97,7 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Sync NASA layer visibility ──────────────────────
+  // ── Sync layer visibility on toggle ────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReadyRef.current) return;
@@ -99,7 +107,7 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
     map.setPaintProperty('ndvi-layer',      'raster-opacity', activeLayers.ndvi      ? 0.78 : 0);
   }, [activeLayers]);
 
-  // ── Initialize Deck.gl (WebGL2) ─────────────────────
+  // ── Initialize Deck.gl ──────────────────────────────
   useEffect(() => {
     if (!deckCanvasRef.current || !mapContainerRef.current) return;
 
@@ -126,7 +134,7 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
     });
 
     deckRef.current      = deck;
-    particlesRef.current = initParticles();
+    particlesRef.current = initParticles([]);
 
     const syncViewport = () => {
       const m = mapRef.current;
@@ -175,9 +183,11 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
               id: 'traffic-particles',
               data: particlesRef.current,
               getPosition: (d: TrafficParticle) => d.position,
-              getRadius: particleRadius(hour),
+              // Fix Bug 2: 'meters' made particles invisible at low zoom and
+              // giant at high zoom. 'pixels' keeps visual size constant.
+              getRadius: 4,
+              radiusUnits: 'pixels',
               getFillColor: particleColor(hour),
-              radiusUnits: 'meters',
               opacity: 0.9,
               pickable: false,
               parameters: { blend: true },
@@ -199,12 +209,17 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
   }, [animateTraffic]);
 
   return (
-    <div className="relative w-full h-full grid-bg">
-      <div ref={mapContainerRef} className="absolute inset-0" />
+    <div
+      className="grid-bg"
+      style={{ position: 'relative', width: '100%', height: '100%' }}
+    >
+      <div
+        ref={mapContainerRef}
+        style={{ position: 'absolute', inset: 0 }}
+      />
       <canvas
         ref={deckCanvasRef}
-        className="absolute inset-0 pointer-events-none"
-        style={{ mixBlendMode: 'screen' }}
+        style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.9 }}
       />
     </div>
   );

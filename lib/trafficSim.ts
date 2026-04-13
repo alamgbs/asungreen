@@ -11,13 +11,14 @@ function lerpPoint(
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 }
 
-export function initParticles(): TrafficParticle[] {
+export function initParticles(corridors?: [number, number][][]): TrafficParticle[] {
+  const corridorsToUse = (corridors && corridors.length > 0) ? corridors : TRAFFIC_CORRIDORS;
   const particles: TrafficParticle[] = [];
   let id = 0;
 
-  for (let ci = 0; ci < TRAFFIC_CORRIDORS.length; ci++) {
-    const corridor = TRAFFIC_CORRIDORS[ci];
-    const count = Math.floor(PARTICLES_BASE / TRAFFIC_CORRIDORS.length);
+  for (let ci = 0; ci < corridorsToUse.length; ci++) {
+    const corridor = corridorsToUse[ci];
+    const count = Math.floor(PARTICLES_BASE / corridorsToUse.length);
     for (let i = 0; i < count; i++) {
       const segIdx = Math.floor(Math.random() * (corridor.length - 1));
       const t = Math.random();
@@ -79,9 +80,4 @@ export function particleColor(hour: number): [number, number, number, number] {
   if (density < 0.6) return [250, 204, 21, 220];    // yellow (medium)
   if (density < 0.85) return [249, 115, 22, 230];   // orange (high)
   return [239, 68, 68, 255];                         // red (peak)
-}
-
-export function particleRadius(hour: number): number {
-  const density = TRAFFIC_BY_HOUR[Math.round(hour) % 24];
-  return 40 + density * 60;
 }

@@ -45,14 +45,17 @@ export const TRAFFIC_CORRIDORS = [
   [[-57.5580, -25.2600], [-57.5600, -25.2700], [-57.5620, -25.2800], [-57.5640, -25.2900]],
 ];
 
-// NASA GIBS tile layer dates and URLs
+// NASA GIBS WMS URLs — served via WMS with EPSG:3857 bbox reprojection
+// (NDVI and LST are not available in GIBS WMTS EPSG:3857, but the WMS endpoint supports it)
+const GIBS_WMS = 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&BBOX={bbox-epsg-3857}&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&STYLES=&FORMAT=image/png';
+
 export const NASA_GIBS = {
   ndvi: {
-    url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_NDVI_8Day/default/2024-01-08/250m/{z}/{y}/{x}.png',
+    url: `${GIBS_WMS}&LAYERS=MODIS_Terra_NDVI_8Day&TIME=2024-08-04`,
     attribution: 'NASA MODIS Terra NDVI',
   },
   soilTemp: {
-    url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_Land_Surface_Temp_Day/default/2024-01-01/1km/{z}/{y}/{x}.png',
+    url: `${GIBS_WMS}&LAYERS=MODIS_Terra_Land_Surface_Temp_Day&TIME=2024-08-10`,
     attribution: 'NASA MODIS Terra LST',
   },
 };
