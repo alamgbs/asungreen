@@ -39,6 +39,14 @@ const MapView = dynamic(() => import('./MapView'), {
   ),
 });
 
+function currentSeason(): string {
+  const m = new Date().getMonth() + 1;
+  if (m >= 9 && m <= 11) return 'spring';
+  if (m === 12 || m <= 2) return 'summer';
+  if (m >= 3 && m <= 5) return 'autumn';
+  return 'winter';
+}
+
 export default function MapClient() {
   const [activeLayers, setActiveLayers] = useState<Record<LayerType, boolean>>({
     soilTemp: true,
@@ -46,6 +54,8 @@ export default function MapClient() {
     ndvi: false,
   });
   const [hour, setHour] = useState(8);
+  const [years, setYears]     = useState<number[]>([new Date().getFullYear()]);
+  const [seasons, setSeasons] = useState<string[]>([currentSeason()]);
   const [coords, setCoords] = useState({
     lat: INITIAL_VIEW_STATE.latitude,
     lng: INITIAL_VIEW_STATE.longitude,
@@ -69,6 +79,8 @@ export default function MapClient() {
         activeLayers={activeLayers}
         hour={hour}
         onCoordsChange={handleCoordsChange}
+        years={years}
+        seasons={seasons}
       />
       <Header />
       <Sidebar
@@ -77,6 +89,10 @@ export default function MapClient() {
         hour={hour}
         onHourChange={setHour}
         trafficActive={activeLayers.traffic}
+        years={years}
+        seasons={seasons}
+        onYearsChange={setYears}
+        onSeasonsChange={setSeasons}
       />
       <Legend activeLayers={activeLayers} />
       <StatusBar lat={coords.lat} lng={coords.lng} zoom={coords.zoom} />
