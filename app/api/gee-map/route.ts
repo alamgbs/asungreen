@@ -141,8 +141,11 @@ async function computeStats(
       dictionaryValue?: { values: Record<string, { constantValue?: number }> };
     }>;
   };
-  const topVal = data.values[data.result];
-  if (!topVal?.dictionaryValue) {
+  const topVal = data.values?.[data.result];
+  if (!topVal) {
+    throw new Error(`value:compute: result key "${data.result}" not found in response`);
+  }
+  if (!topVal.dictionaryValue) {
     throw new Error(`value:compute: expected dictionaryValue, got: ${JSON.stringify(topVal)}`);
   }
   return topVal.dictionaryValue.values;
@@ -354,27 +357,23 @@ export async function POST(request: Request) {
     const token = await getAccessToken(sa);
 
     const { aoiId } = body;
+    const aoi = aoiId !== undefined ? AOIS.find((a) => a.id === aoiId) : undefined;
 
-    // Validate aoiId if provided
-    if (aoiId !== undefined) {
-      const found = AOIS.find((a) => a.id === aoiId);
-      if (!found) {
-        return NextResponse.json({ error: `Unknown aoiId: ${aoiId}` }, { status: 400 });
-      }
+    if (aoiId !== undefined && !aoi) {
+      return NextResponse.json({ error: `Unknown aoiId: ${aoiId}` }, { status: 400 });
     }
 
     const image = layer === 'ndvi'
       ? buildNdviImage(years, seasons)
       : buildLstImage(years, seasons);
 
-    let vizMin: number = 0;
-    let vizMax: number = 0;
-    let displayMin: number = 0;
-    let displayMax: number = 0;
+    let vizMin: number;
+    let vizMax: number;
+    let displayMin: number;
+    let displayMax: number;
     let geometry: GeeValue | undefined;
 
-    if (aoiId) {
-      const aoi = AOIS.find((a) => a.id === aoiId)!;
+    if (aoi) {
       geometry = buildGeometry(aoi.geometry);
 
       // Build the stats expression: reduceRegion over the clipped image
@@ -420,6 +419,7 @@ export async function POST(request: Request) {
       ? visualizeNdvi(image, vizMin, vizMax, geometry)
       : visualizeLst(image, vizMin, vizMax, geometry);
 
+    // Tile map creation uses vizMin/vizMax computed above — must run after stats.
     const res = await fetch(`${GEE_V1}/projects/${sa.project_id}/maps`, {
       method: 'POST',
       headers: {
