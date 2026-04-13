@@ -92,6 +92,8 @@ type GeeValue = {
   functionInvocationValue?: { functionName: string; arguments: Record<string, GeeValue> };
 };
 
+interface GeeExpression { result: string; values: Record<string, GeeValue> }
+
 function constant(v: unknown): GeeValue {
   return { constantValue: v };
 }
@@ -126,11 +128,7 @@ function buildDateFilter(years: number[], seasons: string[]): GeeValue {
   }
 
   if (ranges.length === 0) {
-    // Fallback: accept all images (shouldn't happen with validated input)
-    return invoke('Filter.gte', {
-      leftField:  constant('system:time_start'),
-      rightValue: constant(0),
-    });
+    throw new Error('buildDateFilter: no valid year/season combinations');
   }
 
   if (ranges.length === 1) return ranges[0];
@@ -142,7 +140,7 @@ function buildDateFilter(years: number[], seasons: string[]): GeeValue {
 
 // ── NDVI: Sentinel-2 SR Harmonized, 10m ──────────────────────────────────
 // date+cloud filter → median → normalizedDifference(B8_median, B4_median) → visualize
-function ndviExpression(years: number[], seasons: string[]): object {
+function ndviExpression(years: number[], seasons: string[]): GeeExpression {
   const dateFilter  = buildDateFilter(years, seasons);
   const cloudFilter = invoke('Filter.lt', {
     leftField:  constant('CLOUDY_PIXEL_PERCENTAGE'),
@@ -181,7 +179,7 @@ function ndviExpression(years: number[], seasons: string[]): object {
 
 // ── LST: Landsat 8+9 Collection 2 Level-2, 30m ───────────────────────────
 // merge LC08+LC09 → date+cloud filter → median → ST_B10_median → visualize
-function lstExpression(years: number[], seasons: string[]): object {
+function lstExpression(years: number[], seasons: string[]): GeeExpression {
   const dateFilter  = buildDateFilter(years, seasons);
   const cloudFilter = invoke('Filter.lt', {
     leftField:  constant('CLOUD_COVER'),
@@ -233,6 +231,19 @@ export async function POST(request: Request) {
     const years   = body.years?.length   ? body.years   : [new Date().getFullYear()];
     const seasons = body.seasons?.length ? body.seasons : [currentSeason()];
 
+    const VALID_SEASONS = new Set(Object.keys(SEASON_OFFSETS));
+    for (const s of seasons) {
+      if (!VALID_SEASONS.has(s)) {
+        return NextResponse.json({ error: `Invalid season: ${s}` }, { status: 400 });
+      }
+    }
+
+    for (const y of years) {
+      if (!Number.isInteger(y) || y < 1984 || y > new Date().getFullYear()) {
+        return NextResponse.json({ error: `Invalid year: ${y}` }, { status: 400 });
+      }
+    }
+
     const sa         = loadServiceAccount();
     const token      = await getAccessToken(sa);
     const expression = layer === 'ndvi'
@@ -257,7 +268,7 @@ export async function POST(request: Request) {
     const tileBaseUrl = `${GEE_V1}/${data.name}/tiles`;
 
     return NextResponse.json({ tileBaseUrl, token }, {
-      headers: { 'Cache-Control': 'private, max-age=3000' },
+      headers: { 'Cache-Control': 'private, max-age=3000' }, // 50 min — GEE tile maps expire in ~1 hour
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
