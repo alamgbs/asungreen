@@ -4,6 +4,7 @@ import type { LayerType } from '@/lib/types';
 
 interface LegendProps {
   activeLayers: Record<LayerType, boolean>;
+  geeStats:     Partial<Record<'ndvi' | 'soilTemp', { min: number; max: number }>>;
 }
 
 const LEGENDS: Record<
@@ -39,7 +40,7 @@ const LEGENDS: Record<
   },
 };
 
-export default function Legend({ activeLayers }: LegendProps) {
+export default function Legend({ activeLayers, geeStats }: LegendProps) {
   const visible = (Object.keys(activeLayers) as LayerType[]).filter((k) => activeLayers[k]);
 
   if (visible.length === 0) return null;
@@ -99,18 +100,31 @@ export default function Legend({ activeLayers }: LegendProps) {
               }}
             />
 
-            {/* Min/Max */}
-            <div
-              className="flex justify-between"
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '9px',
-                color: 'var(--text-muted)',
-              }}
-            >
-              <span>{leg.min}</span>
-              <span>{leg.max}</span>
-            </div>
+            {/* Min/Max — dynamic when AOI active, hardcoded otherwise */}
+            {(() => {
+              const stats = layerId !== 'traffic' ? geeStats[layerId as 'ndvi' | 'soilTemp'] : undefined;
+              const isLst = layerId === 'soilTemp';
+              const minLabel = stats
+                ? (isLst ? `${stats.min.toFixed(1)}°C` : stats.min.toFixed(2))
+                : leg.min;
+              const maxLabel = stats
+                ? (isLst ? `${stats.max.toFixed(1)}°C` : stats.max.toFixed(2))
+                : leg.max;
+              return (
+                <div
+                  className="flex justify-between"
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '9px',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  <span>{minLabel}</span>
+                  <span>{maxLabel}</span>
+                </div>
+              );
+            })()}
+
 
             {/* Source */}
             <div
