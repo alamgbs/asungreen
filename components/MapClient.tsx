@@ -53,9 +53,13 @@ export default function MapClient() {
     traffic: false,
     ndvi: false,
   });
-  const [hour, setHour] = useState(8);
+  const [hour, setHour]       = useState(8);
   const [years, setYears]     = useState<number[]>([new Date().getFullYear()]);
   const [seasons, setSeasons] = useState<string[]>([currentSeason()]);
+  const [selectedAoi, setSelectedAoi] = useState<string | null>(null);
+  const [geeStats, setGeeStats] = useState<
+    Partial<Record<'ndvi' | 'soilTemp', { min: number; max: number }>>
+  >({});
   const [coords, setCoords] = useState({
     lat: INITIAL_VIEW_STATE.latitude,
     lng: INITIAL_VIEW_STATE.longitude,
@@ -67,7 +71,13 @@ export default function MapClient() {
 
   const handleCoordsChange = useCallback(
     (lat: number, lng: number, zoom: number) => setCoords({ lat, lng, zoom }),
-    []
+    [],
+  );
+
+  const handleStatsChange = useCallback(
+    (layer: 'ndvi' | 'soilTemp', min: number, max: number) =>
+      setGeeStats((prev) => ({ ...prev, [layer]: { min, max } })),
+    [],
   );
 
   return (
@@ -81,6 +91,8 @@ export default function MapClient() {
         onCoordsChange={handleCoordsChange}
         years={years}
         seasons={seasons}
+        selectedAoi={selectedAoi}
+        onStatsChange={handleStatsChange}
       />
       <Header />
       <Sidebar
@@ -93,8 +105,10 @@ export default function MapClient() {
         seasons={seasons}
         onYearsChange={setYears}
         onSeasonsChange={setSeasons}
+        selectedAoi={selectedAoi}
+        onAoiChange={setSelectedAoi}
       />
-      <Legend activeLayers={activeLayers} />
+      <Legend activeLayers={activeLayers} geeStats={geeStats} />
       <StatusBar lat={coords.lat} lng={coords.lng} zoom={coords.zoom} />
     </div>
   );
