@@ -21,9 +21,11 @@ interface MapViewProps {
   activeLayers: Record<LayerType, boolean>;
   hour: number;
   onCoordsChange?: (lat: number, lng: number, zoom: number) => void;
+  years: number[];
+  seasons: string[];
 }
 
-export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewProps) {
+export default function MapView({ activeLayers, hour, onCoordsChange, years, seasons }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const deckCanvasRef   = useRef<HTMLCanvasElement>(null);
   const mapRef          = useRef<maplibregl.Map | null>(null);
@@ -143,33 +145,31 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
     map.setPaintProperty('ndvi-layer',      'raster-opacity', activeLayers.ndvi      ? 0.78 : 0);
   }, [activeLayers]);
 
-  // ── Initialize GEE tile URLs ────────────────────────
-  // Calls GEE REST API once per layer per session. When URLs are ready,
-  // calls setTiles() to trigger MapLibre to re-fetch tiles that were
-  // previously served as transparent placeholders.
+  // ── Fetch / refresh GEE tile URLs ──────────────────
+  // Runs on mount and whenever years or seasons change.
+  // getGeeTileUrl caches by (layer, years, seasons) — only re-fetches on change.
+  // setTiles() forces MapLibre to reload tiles that were transparent placeholders.
   useEffect(() => {
     let cancelled = false;
 
-    async function initGee(layer: 'ndvi' | 'soilTemp', sourceId: string) {
+    async function refreshGee(layer: 'ndvi' | 'soilTemp', sourceId: string) {
       try {
-        await getGeeTileUrl(layer); // populates geeTileUrlCache[layer]
+        await getGeeTileUrl(layer, years, seasons);
         if (cancelled) return;
         const m = mapRef.current;
         if (!m || !mapReadyRef.current) return;
         const src = m.getSource(sourceId) as maplibregl.RasterTileSource | undefined;
-        // setTiles forces MapLibre to reload all tiles for this source,
-        // replacing transparent placeholders with real GEE data.
         src?.setTiles([`env-tile://${layer}/{z}/{x}/{y}`]);
       } catch (err) {
-        console.error(`GEE init failed for ${layer}:`, err);
+        console.error(`GEE refresh failed for ${layer}:`, err);
       }
     }
 
-    initGee('ndvi', 'ndvi-source');
-    initGee('soilTemp', 'soil-temp-source');
+    refreshGee('ndvi', 'ndvi-source');
+    refreshGee('soilTemp', 'soil-temp-source');
 
     return () => { cancelled = true; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [years, seasons]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load OSM road corridors ─────────────────────────
   // Fetches /data/asuncion-roads.geojson once, re-initializes particles
