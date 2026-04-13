@@ -22,8 +22,8 @@ const LAYERS: {
   {
     id: 'soilTemp',
     name: 'TEMPERATURA',
-    subtitle: 'MODIS·MOD11A1·LST',
-    source: 'NASA TERRA · 1km',
+    subtitle: 'LANDSAT·8/9·LST·30m',
+    source: 'LANDSAT 8+9 · 30m',
     icon: <Thermometer size={13} />,
     color: 'var(--neon-orange)',
   },
@@ -38,8 +38,8 @@ const LAYERS: {
   {
     id: 'ndvi',
     name: 'VEGETACION',
-    subtitle: 'NDVI·MODIS·250m',
-    source: 'NASA TERRA · 250m',
+    subtitle: 'NDVI·SENTINEL-2·10m',
+    source: 'SENTINEL-2 · 10m',
     icon: <TreePine size={13} />,
     color: 'var(--neon-green)',
   },
@@ -278,7 +278,7 @@ export default function Sidebar({
             textAlign: 'center',
           }}
         >
-          © 2025 ASUNGREEN · NASA/GEE/OSM
+          © 2025 ASUNGREEN · GEE/OSM
         </p>
       </div>
     </aside>

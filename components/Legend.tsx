@@ -16,7 +16,7 @@ const LEGENDS: Record<
     gradient: 'linear-gradient(to right, #001aff, #0080ff, #00ffcc, #ffe600, #ff7c00, #ff2d78)',
     min: '<20°C',
     max: '>45°C',
-    source: 'MODIS·LST·1km',
+    source: 'LANDSAT·8/9·LST·30m',
     glowColor: 'var(--neon-orange)',
   },
   traffic: {
@@ -34,7 +34,7 @@ const LEGENDS: Record<
     gradient: 'linear-gradient(to right, #ff2d78, #ffe600, #00ff88, #00a855, #004d22)',
     min: '-1 SUELO',
     max: '+1 DENSA',
-    source: 'MODIS·NDVI·250m',
+    source: 'SENTINEL-2·NDVI·10m',
     glowColor: 'var(--neon-green)',
   },
 };
