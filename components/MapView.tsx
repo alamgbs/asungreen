@@ -47,8 +47,7 @@ export default function MapView({ activeLayers, hour, onCoordsChange, years, sea
       pitch: INITIAL_VIEW_STATE.pitch,
       attributionControl: false,
       // transformRequest intercepts every tile load for env-tile:// URLs.
-      // Tiles inside Asunción bbox → /public/tiles/ (local, instant).
-      // Tiles outside Asunción or above max local zoom → GEE live API.
+      // All tiles are served from GEE live API (shouldUseLocalTile always returns false).
       transformRequest: (url) => {
         if (!url.startsWith('env-tile://')) return undefined;
         const [layer, z, x, y] = url.replace('env-tile://', '').split('/');
@@ -62,7 +61,7 @@ export default function MapView({ activeLayers, hour, onCoordsChange, years, sea
         const geeToken = geeTileTokenCache[layer as 'ndvi' | 'soilTemp'];
         if (!geeBase || !geeToken) {
           // GEE URL not loaded yet — return transparent tile to avoid 404s.
-          // initGee() will call setTiles() once the URL is ready.
+          // refreshGee() will call setTiles() once the URL is ready.
           return { url: TRANSPARENT_TILE };
         }
         return {

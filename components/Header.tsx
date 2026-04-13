@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 const BADGES = [
   { label: 'SYS:NOMINAL', color: 'var(--neon-green)',   glow: 'var(--glow-green)'   },
-  { label: 'NASA·MODIS',  color: 'var(--neon-cyan)',    glow: 'var(--glow-cyan)'    },
+  { label: 'GEE·S2/L8',   color: 'var(--neon-cyan)',    glow: 'var(--glow-cyan)'    },
   { label: 'GEE·READY',   color: 'var(--neon-purple)',  glow: 'var(--glow-purple)'  },
 ];
 
