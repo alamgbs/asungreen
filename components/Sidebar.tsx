@@ -2,6 +2,7 @@
 
 import { Thermometer, Car, TreePine } from 'lucide-react';
 import type { LayerType } from '@/lib/types';
+import { AOIS } from '@/lib/aois';
 
 interface SidebarProps {
   activeLayers: Record<LayerType, boolean>;
@@ -13,6 +14,8 @@ interface SidebarProps {
   seasons: string[];
   onYearsChange: (years: number[]) => void;
   onSeasonsChange: (seasons: string[]) => void;
+  selectedAoi: string | null;
+  onAoiChange: (id: string | null) => void;
 }
 
 const SEASON_LABELS: { id: string; label: string }[] = [
@@ -89,6 +92,8 @@ export default function Sidebar({
   seasons,
   onYearsChange,
   onSeasonsChange,
+  selectedAoi,
+  onAoiChange,
 }: SidebarProps) {
   function toggleYear(y: number) {
     if (years.includes(y) && years.length === 1) return;
@@ -98,6 +103,11 @@ export default function Sidebar({
   function toggleSeason(s: string) {
     if (seasons.includes(s) && seasons.length === 1) return;
     onSeasonsChange(seasons.includes(s) ? seasons.filter(v => v !== s) : [...seasons, s]);
+  }
+
+  function handleAoiClick(id: string) {
+    // Radio-select: clicking the active AOI deselects (returns to GLOBAL)
+    onAoiChange(selectedAoi === id ? null : id);
   }
 
   const showTemporalFilter = activeLayers.ndvi || activeLayers.soilTemp;
@@ -130,6 +140,66 @@ export default function Sidebar({
         >
           DEPT·CENTRAL · ASU · PY
         </p>
+      </div>
+
+      {/* ── AOI Filter ─────────────────────────────────── */}
+      <div className="terminal-panel fade-in-up">
+        <div
+          style={{
+            fontFamily:    'var(--font-pixel)',
+            fontSize:      '6px',
+            color:         'var(--neon-cyan)',
+            textShadow:    'var(--glow-cyan)',
+            letterSpacing: '0.04em',
+            marginBottom:  '10px',
+          }}
+        >
+          &gt; AOI_FILTER
+        </div>
+        <div className="flex gap-1 flex-wrap">
+          {/* GLOBAL pill — always first */}
+          <button
+            key="global"
+            onClick={() => onAoiChange(null)}
+            style={{
+              fontFamily:    'var(--font-pixel)',
+              fontSize:      '6px',
+              letterSpacing: '0.04em',
+              padding:       '3px 6px',
+              border:        `1px solid ${selectedAoi === null ? 'var(--neon-cyan)' : 'var(--bg-border)'}`,
+              background:    selectedAoi === null ? 'var(--neon-cyan)22' : 'transparent',
+              color:         selectedAoi === null ? 'var(--neon-cyan)' : 'var(--text-muted)',
+              textShadow:    selectedAoi === null ? 'var(--glow-cyan)' : 'none',
+              cursor:        'pointer',
+              transition:    'all 0.15s',
+            }}
+          >
+            GLOBAL
+          </button>
+          {AOIS.map((aoi) => {
+            const active = selectedAoi === aoi.id;
+            return (
+              <button
+                key={aoi.id}
+                onClick={() => handleAoiClick(aoi.id)}
+                style={{
+                  fontFamily:    'var(--font-pixel)',
+                  fontSize:      '6px',
+                  letterSpacing: '0.04em',
+                  padding:       '3px 6px',
+                  border:        `1px solid ${active ? 'var(--neon-cyan)' : 'var(--bg-border)'}`,
+                  background:    active ? 'var(--neon-cyan)22' : 'transparent',
+                  color:         active ? 'var(--neon-cyan)' : 'var(--text-muted)',
+                  textShadow:    active ? 'var(--glow-cyan)' : 'none',
+                  cursor:        'pointer',
+                  transition:    'all 0.15s',
+                }}
+              >
+                {aoi.label.toUpperCase().slice(0, 8)}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ── Layer cards ────────────────────────────── */}
