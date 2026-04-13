@@ -144,7 +144,8 @@ function buildDateFilter(years: number[], seasons: string[]): GeeValue {
 }
 
 // ── NDVI: Sentinel-2 SR Harmonized, 10m ──────────────────────────────────
-// date+cloud filter → median → normalizedDifference(B8_median, B4_median) → visualize
+// date+cloud filter → select B4+B8 → median → normalizedDifference → visualize
+// Note: Image.normalizedDifference uses 'input' (not 'image') in GEE REST API.
 function ndviExpression(years: number[], seasons: string[]): GeeExpression {
   const dateFilter  = buildDateFilter(years, seasons);
   const cloudFilter = invoke('Filter.lt', {
@@ -162,13 +163,21 @@ function ndviExpression(years: number[], seasons: string[]): GeeExpression {
     filter: cloudFilter,
   });
 
+  // Select only B4 (Red) and B8 (NIR) before reducing so median image
+  // has exactly ['B4_median', 'B8_median'] — avoids band-count issues.
+  const selected = invoke('ImageCollection.select', {
+    collection:   filtered,
+    bandSelectors: constant(['B4', 'B8']),
+  });
+
   const median = invoke('ImageCollection.reduce', {
-    collection: filtered,
+    collection: selected,
     reducer:    invoke('Reducer.median', {}),
   });
 
+  // GEE REST API: Image.normalizedDifference takes 'input' for the image argument.
   const ndvi = invoke('Image.normalizedDifference', {
-    image:     median,
+    input:     median,
     bandNames: constant(['B8_median', 'B4_median']),
   });
 
