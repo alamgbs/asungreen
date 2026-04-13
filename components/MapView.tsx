@@ -9,10 +9,8 @@ import { INITIAL_VIEW_STATE } from '@/lib/constants';
 import { initParticles, updateParticles, particleColor, loadCorridors } from '@/lib/trafficSim';
 import type { TrafficParticle } from '@/lib/types';
 import { applyNeonTheme } from '@/lib/mapStyle';
-import { getGeeTileUrl, geeTileUrlCache } from '@/lib/geeApi';
+import { getGeeTileUrl, geeTileUrlCache, geeTileTokenCache } from '@/lib/geeApi';
 import { shouldUseLocalTile } from '@/lib/tileRouter';
-
-const GEE_KEY = process.env.NEXT_PUBLIC_GEE_API_KEY ?? '';
 
 // 1×1 transparent PNG — returned for GEE tiles when the GEE URL is not yet loaded.
 // Prevents MapLibre from throwing on the custom env-tile:// scheme while GEE initializes.
@@ -58,13 +56,17 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
           return { url: `/tiles/${layer}/${zi}/${xi}/${yi}.png` };
         }
 
-        const geeBase = geeTileUrlCache[layer as 'ndvi' | 'soilTemp'];
-        if (!geeBase) {
+        const geeBase  = geeTileUrlCache[layer as 'ndvi' | 'soilTemp'];
+        const geeToken = geeTileTokenCache[layer as 'ndvi' | 'soilTemp'];
+        if (!geeBase || !geeToken) {
           // GEE URL not loaded yet — return transparent tile to avoid 404s.
-          // MapView.setTiles() will trigger a reload once GEE URL is ready.
+          // initGee() will call setTiles() once the URL is ready.
           return { url: TRANSPARENT_TILE };
         }
-        return { url: `${geeBase}/${zi}/${xi}/${yi}?key=${GEE_KEY}` };
+        return {
+          url: `${geeBase}/${zi}/${xi}/${yi}`,
+          headers: { Authorization: `Bearer ${geeToken}` },
+        };
       },
     });
 

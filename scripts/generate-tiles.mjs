@@ -1,35 +1,54 @@
 // scripts/generate-tiles.mjs
 // Usage: node scripts/generate-tiles.mjs
-// Requires .env.local with NEXT_PUBLIC_GEE_API_KEY and NEXT_PUBLIC_GEE_PROJECT
+// Requires service-account.json at project root (never commit this file).
 
 import { writeFileSync, mkdirSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { createSign } from 'crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 
-// ── Load .env.local ─────────────────────────────────
-function loadEnv() {
-  try {
-    return Object.fromEntries(
-      readFileSync(join(ROOT, '.env.local'), 'utf8')
-        .split('\n')
-        .filter((l) => l.trim() && !l.startsWith('#') && l.includes('='))
-        .map((l) => {
-          const idx = l.indexOf('=');
-          return [l.slice(0, idx).trim(), l.slice(idx + 1).trim()];
-        })
-    );
-  } catch {
-    return {};
-  }
+// ── Load service account ─────────────────────────────
+const SA = JSON.parse(readFileSync(join(ROOT, 'service-account.json'), 'utf8'));
+const GEE_PROJECT = SA.project_id;
+const GEE_V1 = 'https://earthengine.googleapis.com/v1';
+
+// ── OAuth2 via service account JWT ──────────────────
+function b64url(buf) {
+  return Buffer.from(buf).toString('base64')
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
-const env = loadEnv();
-const GEE_API_KEY = env['NEXT_PUBLIC_GEE_API_KEY'] ?? '';
-const GEE_PROJECT = env['NEXT_PUBLIC_GEE_PROJECT'] ?? '';
-const GEE_V1 = 'https://earthengine.googleapis.com/v1';
+async function getAccessToken() {
+  const now = Math.floor(Date.now() / 1000);
+  const header  = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+  const payload = b64url(JSON.stringify({
+    iss:   SA.client_email,
+    scope: 'https://www.googleapis.com/auth/earthengine',
+    aud:   'https://oauth2.googleapis.com/token',
+    iat:   now,
+    exp:   now + 3600,
+  }));
+  const unsigned = `${header}.${payload}`;
+  const sign = createSign('RSA-SHA256');
+  sign.update(unsigned);
+  const sig = b64url(sign.sign(SA.private_key));
+  const jwt = `${unsigned}.${sig}`;
+
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion:  jwt,
+    }),
+  });
+  if (!res.ok) throw new Error(`OAuth2 token error: ${res.status} ${await res.text()}`);
+  const data = await res.json();
+  return data.access_token;
+}
 
 // ── Asunción bbox ────────────────────────────────────
 const WEST  = -57.75;
@@ -47,7 +66,6 @@ function latToTile(lat, z) {
       Math.pow(2, z)
   );
 }
-
 function tilesForZoom(z) {
   const xMin = lngToTile(WEST,  z);
   const xMax = lngToTile(EAST,  z);
@@ -63,85 +81,71 @@ function tilesForZoom(z) {
 }
 
 // ── GEE expressions ──────────────────────────────────
-function isoDate(daysAgo) {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().split('T')[0];
-}
+// Rules learned from GEE REST API probing:
+//   - Image.visualize takes 'image' arg (not 'input')
+//   - ImageCollection.mosaic takes 'collection' arg
+//   - Request body needs fileFormat: 'PNG'
+//   - Can pass 'bands' inside Image.visualize instead of a separate Image.select
+//
+// MODIS MOD13A2: 16-day NDVI composite, 500m.
+//   Band 'NDVI': raw 0–10000 (×0.0001 = NDVI). Mosaic = most recent valid pixel.
+//
+// MODIS MOD11A2: 8-day daytime LST, 1km.
+//   Band 'LST_Day_1km': raw in 50×Kelvin.  ~14300 ≈ 13°C, ~16150 ≈ 50°C.
 
-function ndviExpression(start, end) {
+function ndviExpression() {
   return {
     result: '0',
     values: {
       '0': { functionInvocationValue: { functionName: 'Image.visualize', arguments: {
-        input: { valueReference: '1' },
-        min: { constantValue: -0.2 }, max: { constantValue: 0.8 },
+        image:   { valueReference: '1' },
+        min:     { constantValue: 0 },
+        max:     { constantValue: 8000 },
+        bands:   { constantValue: ['NDVI'] },
         palette: { constantValue: ['ff2d78','ffe600','00ff88','00a855','004d22'] },
       }}},
-      '1': { functionInvocationValue: { functionName: 'Image.normalizedDifference', arguments: {
-        input: { valueReference: '2' }, bandNames: { constantValue: ['B8','B4'] },
+      '1': { functionInvocationValue: { functionName: 'ImageCollection.mosaic', arguments: {
+        collection: { valueReference: '2' },
       }}},
-      '2': { functionInvocationValue: { functionName: 'ImageCollection.median', arguments: {
-        collection: { valueReference: '3' },
-      }}},
-      '3': { functionInvocationValue: { functionName: 'Collection.filter', arguments: {
-        collection: { valueReference: '4' },
-        filter: { functionInvocationValue: { functionName: 'Filter.lt', arguments: {
-          name: { constantValue: 'CLOUDY_PIXEL_PERCENTAGE' }, value: { constantValue: 20 },
-        }}},
-      }}},
-      '4': { functionInvocationValue: { functionName: 'ImageCollection.filterDate', arguments: {
-        collection: { valueReference: '5' }, start: { constantValue: start }, end: { constantValue: end },
-      }}},
-      '5': { functionInvocationValue: { functionName: 'ImageCollection.load', arguments: {
-        id: { constantValue: 'COPERNICUS/S2_SR_HARMONIZED' },
+      '2': { functionInvocationValue: { functionName: 'ImageCollection.load', arguments: {
+        id: { constantValue: 'MODIS/061/MOD13A2' },
       }}},
     },
   };
 }
 
-function lstExpression(start, end) {
+function lstExpression() {
   return {
     result: '0',
     values: {
       '0': { functionInvocationValue: { functionName: 'Image.visualize', arguments: {
-        input: { valueReference: '1' },
-        min: { constantValue: 15 }, max: { constantValue: 50 },
+        image:   { valueReference: '1' },
+        min:     { constantValue: 14300 },
+        max:     { constantValue: 16200 },
+        bands:   { constantValue: ['LST_Day_1km'] },
         palette: { constantValue: ['001aff','00e5ff','ffe600','ff7c00','ff2d78'] },
       }}},
-      '1': { functionInvocationValue: { functionName: 'Image.add', arguments: {
-        image1: { valueReference: '2' }, image2: { constantValue: -124.15 },
+      '1': { functionInvocationValue: { functionName: 'ImageCollection.mosaic', arguments: {
+        collection: { valueReference: '2' },
       }}},
-      '2': { functionInvocationValue: { functionName: 'Image.multiply', arguments: {
-        image1: { valueReference: '3' }, image2: { constantValue: 0.00341802 },
-      }}},
-      '3': { functionInvocationValue: { functionName: 'Image.select', arguments: {
-        input: { valueReference: '4' }, bandSelectors: { constantValue: ['ST_B10'] },
-      }}},
-      '4': { functionInvocationValue: { functionName: 'ImageCollection.first', arguments: {
-        collection: { valueReference: '5' },
-      }}},
-      '5': { functionInvocationValue: { functionName: 'ImageCollection.sort', arguments: {
-        collection: { valueReference: '6' }, property: { constantValue: 'CLOUD_COVER' },
-      }}},
-      '6': { functionInvocationValue: { functionName: 'ImageCollection.filterDate', arguments: {
-        collection: { valueReference: '7' }, start: { constantValue: start }, end: { constantValue: end },
-      }}},
-      '7': { functionInvocationValue: { functionName: 'ImageCollection.load', arguments: {
-        id: { constantValue: 'LANDSAT/LC08/C02/T1_L2' },
+      '2': { functionInvocationValue: { functionName: 'ImageCollection.load', arguments: {
+        id: { constantValue: 'MODIS/061/MOD11A2' },
       }}},
     },
   };
 }
 
 // ── GEE map creation ─────────────────────────────────
-async function createGeeMap(expression) {
+async function createGeeMap(expression, token) {
   const res = await fetch(
-    `${GEE_V1}/projects/${GEE_PROJECT}/maps?key=${GEE_API_KEY}`,
+    `${GEE_V1}/projects/${GEE_PROJECT}/maps`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ expression }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ expression, fileFormat: 'PNG' }),
     }
   );
   if (!res.ok) throw new Error(`GEE map creation failed: ${res.status} ${await res.text()}`);
@@ -154,7 +158,6 @@ async function downloadWithConcurrency(tasks, concurrency) {
   let idx = 0;
   let done = 0;
   const total = tasks.length;
-
   async function worker() {
     while (idx < total) {
       const task = tasks[idx++];
@@ -163,44 +166,32 @@ async function downloadWithConcurrency(tasks, concurrency) {
       if (done % 50 === 0) process.stdout.write(`  ${done}/${total}\n`);
     }
   }
-
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
 }
 
 // ── Main ─────────────────────────────────────────────
 async function main() {
-  if (!GEE_API_KEY || !GEE_PROJECT) {
-    throw new Error('Set NEXT_PUBLIC_GEE_API_KEY and NEXT_PUBLIC_GEE_PROJECT in .env.local');
-  }
+  console.log('Authenticating with Google Earth Engine...');
+  const token = await getAccessToken();
+  console.log('  ✓ OAuth2 token obtained');
 
   const LAYERS = [
-    {
-      name: 'ndvi',
-      maxZoom: 14,
-      expr: ndviExpression(isoDate(90), isoDate(0)),
-    },
-    {
-      name: 'soilTemp',
-      maxZoom: 12,
-      expr: lstExpression(isoDate(180), isoDate(0)),
-    },
+    { name: 'ndvi',     maxZoom: 14, expr: ndviExpression() },
+    { name: 'soilTemp', maxZoom: 12, expr: lstExpression()  },
   ];
 
   for (const layer of LAYERS) {
     console.log(`\nCreating GEE map for ${layer.name}...`);
-    const tileBase = await createGeeMap(layer.expr);
+    const tileBase = await createGeeMap(layer.expr, token);
     console.log(`  Tile base URL: ${tileBase}`);
 
-    const zooms = Array.from(
-      { length: layer.maxZoom - 10 + 1 },
-      (_, i) => 10 + i
-    );
+    const zooms    = Array.from({ length: layer.maxZoom - 10 + 1 }, (_, i) => 10 + i);
     const allTiles = zooms.flatMap((z) => tilesForZoom(z));
     console.log(`  Downloading ${allTiles.length} tiles (zoom 10-${layer.maxZoom})...`);
 
     const tasks = allTiles.map(({ z, x, y }) => async () => {
-      const url = `${tileBase}/${z}/${x}/${y}?key=${GEE_API_KEY}`;
-      const res = await fetch(url);
+      const url = `${tileBase}/${z}/${x}/${y}`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) {
         console.warn(`  WARN: tile ${layer.name}/${z}/${x}/${y} → ${res.status}`);
         return;
