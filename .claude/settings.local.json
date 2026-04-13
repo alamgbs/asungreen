@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"400\\\\|tile\\\\|MODIS\\\\|CartoCDN\" /c/Users/alamb/OneDrive/Attachments/Documents/AsuGreen --include=*.ts --include=*.tsx)",
+      "WebFetch(domain:gibs.earthdata.nasa.gov)",
+      "Bash(npm run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(node -e \"const s = require\\(''maplibre-gl''\\); console.log\\(Object.keys\\(s\\).slice\\(0,10\\)\\)\")",
+      "Bash(node -e \"const s = require\\(''maplibre-gl''\\); console.log\\(Object.keys\\(s\\).join\\('', ''\\)\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://tiles.openfreemap.org/styles/dark\")",
+      "Bash(node:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node -e \":*)",
+      "Bash(grep -v \"^$\")",
+      "Bash(xargs grep:*)"
+    ]
+  }
+}
