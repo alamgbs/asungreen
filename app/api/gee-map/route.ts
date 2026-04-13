@@ -11,6 +11,7 @@ import { createSign } from 'crypto';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { NextResponse } from 'next/server';
+import { AOIS } from '@/lib/aois';
 
 const GEE_V1 = 'https://earthengine.googleapis.com/v1';
 
@@ -111,6 +112,46 @@ function arr(values: GeeValue[]): GeeValue {
 /** Wraps a GeoJSON geometry object as a GEE geoJsonGeometry value node. */
 function buildGeometry(geojson: { type: string; coordinates: unknown }): GeeValue {
   return { geoJsonGeometry: geojson };
+}
+
+/**
+ * Calls GEE value:compute to evaluate a reduceRegion expression.
+ * Returns the raw dictionary values from GEE (each entry is a GeeValue node).
+ */
+async function computeStats(
+  token:      string,
+  projectId:  string,
+  expression: GeeExpression,
+): Promise<Record<string, { constantValue?: number }>> {
+  const res = await fetch(`${GEE_V1}/projects/${projectId}/value:compute`, {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      Authorization:   `Bearer ${token}`,
+    },
+    body: JSON.stringify({ expression }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`GEE value:compute error: ${text}`);
+  }
+  const data = await res.json() as {
+    result: string;
+    values: Record<string, {
+      dictionaryValue?: { values: Record<string, { constantValue?: number }> };
+    }>;
+  };
+  const topVal = data.values[data.result];
+  if (!topVal?.dictionaryValue) {
+    throw new Error(`value:compute: expected dictionaryValue, got: ${JSON.stringify(topVal)}`);
+  }
+  return topVal.dictionaryValue.values;
+}
+
+/** Extracts a number from a GEE constantValue node. Throws if not found. */
+function extractNumber(v: { constantValue?: number } | undefined, key: string): number {
+  if (v && typeof v.constantValue === 'number') return v.constantValue;
+  throw new Error(`value:compute: could not read key "${key}": ${JSON.stringify(v)}`);
 }
 
 // ── LST DN → Celsius conversion ──────────────────────────────────────────
@@ -282,9 +323,10 @@ function visualizeLst(
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
-      layer: 'ndvi' | 'soilTemp';
-      years?: number[];
+      layer:    'ndvi' | 'soilTemp';
+      years?:   number[];
       seasons?: string[];
+      aoiId?:   string;
     };
 
     const { layer } = body;
@@ -311,13 +353,72 @@ export async function POST(request: Request) {
     const sa    = loadServiceAccount();
     const token = await getAccessToken(sa);
 
+    const { aoiId } = body;
+
+    // Validate aoiId if provided
+    if (aoiId !== undefined) {
+      const found = AOIS.find((a) => a.id === aoiId);
+      if (!found) {
+        return NextResponse.json({ error: `Unknown aoiId: ${aoiId}` }, { status: 400 });
+      }
+    }
+
     const image = layer === 'ndvi'
       ? buildNdviImage(years, seasons)
       : buildLstImage(years, seasons);
 
+    let vizMin: number = 0;
+    let vizMax: number = 0;
+    let displayMin: number = 0;
+    let displayMax: number = 0;
+    let geometry: GeeValue | undefined;
+
+    if (aoiId) {
+      const aoi = AOIS.find((a) => a.id === aoiId)!;
+      geometry = buildGeometry(aoi.geometry);
+
+      // Build the stats expression: reduceRegion over the clipped image
+      const statsExpression: GeeExpression = {
+        result: 'result',
+        values: {
+          result: invoke('Image.reduceRegion', {
+            input: invoke('Image.clip', { input: image, geometry }),
+            reducer: invoke('Reducer.percentile', {
+              percentiles: arr([constant(5), constant(95)]),
+            }),
+            geometry,
+            scale:      constant(1000),
+            bestEffort: constant(true),
+          }),
+        },
+      };
+
+      const statsDict = await computeStats(token, sa.project_id, statsExpression);
+
+      if (layer === 'ndvi') {
+        // Band name from Image.normalizedDifference is 'nd'
+        const p5  = extractNumber(statsDict['nd_p5'],  'nd_p5');
+        const p95 = extractNumber(statsDict['nd_p95'], 'nd_p95');
+        vizMin = p5;  vizMax = p95;
+        displayMin = p5; displayMax = p95;
+      } else {
+        // Band name from ImageCollection.reduce(Reducer.median) is 'ST_B10_median'
+        const p5  = extractNumber(statsDict['ST_B10_median_p5'],  'ST_B10_median_p5');
+        const p95 = extractNumber(statsDict['ST_B10_median_p95'], 'ST_B10_median_p95');
+        vizMin = p5;  vizMax = p95;
+        displayMin = lstDnToCelsius(p5);
+        displayMax = lstDnToCelsius(p95);
+      }
+    } else {
+      vizMin     = VIZ_DEFAULTS[layer].min;
+      vizMax     = VIZ_DEFAULTS[layer].max;
+      displayMin = DISPLAY_DEFAULTS[layer].min;
+      displayMax = DISPLAY_DEFAULTS[layer].max;
+    }
+
     const expression = layer === 'ndvi'
-      ? visualizeNdvi(image, VIZ_DEFAULTS.ndvi.min, VIZ_DEFAULTS.ndvi.max)
-      : visualizeLst(image, VIZ_DEFAULTS.soilTemp.min, VIZ_DEFAULTS.soilTemp.max);
+      ? visualizeNdvi(image, vizMin, vizMax, geometry)
+      : visualizeLst(image, vizMin, vizMax, geometry);
 
     const res = await fetch(`${GEE_V1}/projects/${sa.project_id}/maps`, {
       method: 'POST',
@@ -336,12 +437,10 @@ export async function POST(request: Request) {
     const data = (await res.json()) as { name: string };
     const tileBaseUrl = `${GEE_V1}/${data.name}/tiles`;
 
-    const displayMin = DISPLAY_DEFAULTS[layer].min;
-    const displayMax = DISPLAY_DEFAULTS[layer].max;
-
-    return NextResponse.json({ tileBaseUrl, token, min: displayMin, max: displayMax }, {
-      headers: { 'Cache-Control': 'private, max-age=3000' },
-    });
+    return NextResponse.json(
+      { tileBaseUrl, token, min: displayMin, max: displayMax },
+      { headers: { 'Cache-Control': 'private, max-age=3000' } },
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: msg }, { status: 500 });
