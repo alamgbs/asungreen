@@ -5,10 +5,19 @@ import maplibregl from 'maplibre-gl';
 import { ScatterplotLayer } from '@deck.gl/layers';
 import { Deck } from '@deck.gl/core';
 import type { LayerType } from '@/lib/types';
-import { INITIAL_VIEW_STATE, NASA_GIBS } from '@/lib/constants';
-import { initParticles, updateParticles, particleColor } from '@/lib/trafficSim';
+import { INITIAL_VIEW_STATE } from '@/lib/constants';
+import { initParticles, updateParticles, particleColor, loadCorridors } from '@/lib/trafficSim';
 import type { TrafficParticle } from '@/lib/types';
 import { applyNeonTheme } from '@/lib/mapStyle';
+import { getGeeTileUrl, geeTileUrlCache } from '@/lib/geeApi';
+import { shouldUseLocalTile } from '@/lib/tileRouter';
+
+const GEE_KEY = process.env.NEXT_PUBLIC_GEE_API_KEY ?? '';
+
+// 1×1 transparent PNG — returned for GEE tiles when the GEE URL is not yet loaded.
+// Prevents MapLibre from throwing on the custom env-tile:// scheme while GEE initializes.
+const TRANSPARENT_TILE =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAABjE+ibYAAAAASUVORK5CYII=';
 
 interface MapViewProps {
   activeLayers: Record<LayerType, boolean>;
@@ -37,6 +46,26 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
       zoom: INITIAL_VIEW_STATE.zoom,
       pitch: INITIAL_VIEW_STATE.pitch,
       attributionControl: false,
+      // transformRequest intercepts every tile load for env-tile:// URLs.
+      // Tiles inside Asunción bbox → /public/tiles/ (local, instant).
+      // Tiles outside Asunción or above max local zoom → GEE live API.
+      transformRequest: (url) => {
+        if (!url.startsWith('env-tile://')) return undefined;
+        const [layer, z, x, y] = url.replace('env-tile://', '').split('/');
+        const zi = +z, xi = +x, yi = +y;
+
+        if (shouldUseLocalTile(layer as 'ndvi' | 'soilTemp', zi, xi, yi)) {
+          return { url: `/tiles/${layer}/${zi}/${xi}/${yi}.png` };
+        }
+
+        const geeBase = geeTileUrlCache[layer as 'ndvi' | 'soilTemp'];
+        if (!geeBase) {
+          // GEE URL not loaded yet — return transparent tile to avoid 404s.
+          // MapView.setTiles() will trigger a reload once GEE URL is ready.
+          return { url: TRANSPARENT_TILE };
+        }
+        return { url: `${geeBase}/${zi}/${xi}/${yi}?key=${GEE_KEY}` };
+      },
     });
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
@@ -48,11 +77,14 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
     map.on('load', () => {
       applyNeonTheme(map);
 
+      // soilTemp source — uses env-tile:// scheme, routed by transformRequest
       map.addSource('soil-temp-source', {
         type: 'raster',
-        tiles: [NASA_GIBS.soilTemp.url],
+        tiles: ['env-tile://soilTemp/{z}/{x}/{y}'],
         tileSize: 256,
-        attribution: NASA_GIBS.soilTemp.attribution,
+        minzoom: 0,
+        maxzoom: 18,
+        attribution: 'Landsat-8/9 via Google Earth Engine',
       });
       map.addLayer({
         id: 'soil-temp-layer',
@@ -61,11 +93,14 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
         paint: { 'raster-opacity': 0 },
       });
 
+      // NDVI source — uses env-tile:// scheme, routed by transformRequest
       map.addSource('ndvi-source', {
         type: 'raster',
-        tiles: [NASA_GIBS.ndvi.url],
+        tiles: ['env-tile://ndvi/{z}/{x}/{y}'],
         tileSize: 256,
-        attribution: NASA_GIBS.ndvi.attribution,
+        minzoom: 0,
+        maxzoom: 18,
+        attribution: 'Sentinel-2 via Google Earth Engine',
       });
       map.addLayer({
         id: 'ndvi-layer',
@@ -74,9 +109,8 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
         paint: { 'raster-opacity': 0 },
       });
 
-      // Fix Bug 1: apply initial opacities here, not in a separate effect.
-      // mapReadyRef is a ref so React never re-renders when it changes,
-      // meaning the external effect that syncs opacities never fires after load.
+      // Apply initial opacities in load handler (not in a separate effect —
+      // mapReadyRef is a ref and doesn't trigger re-renders)
       map.setPaintProperty('soil-temp-layer', 'raster-opacity',
         activeLayers.soilTemp ? 0.75 : 0);
       map.setPaintProperty('ndvi-layer', 'raster-opacity',
@@ -106,6 +140,47 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
     map.setPaintProperty('soil-temp-layer', 'raster-opacity', activeLayers.soilTemp ? 0.75 : 0);
     map.setPaintProperty('ndvi-layer',      'raster-opacity', activeLayers.ndvi      ? 0.78 : 0);
   }, [activeLayers]);
+
+  // ── Initialize GEE tile URLs ────────────────────────
+  // Calls GEE REST API once per layer per session. When URLs are ready,
+  // calls setTiles() to trigger MapLibre to re-fetch tiles that were
+  // previously served as transparent placeholders.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function initGee(layer: 'ndvi' | 'soilTemp', sourceId: string) {
+      try {
+        await getGeeTileUrl(layer); // populates geeTileUrlCache[layer]
+        if (cancelled) return;
+        const m = mapRef.current;
+        if (!m || !mapReadyRef.current) return;
+        const src = m.getSource(sourceId) as maplibregl.RasterTileSource | undefined;
+        // setTiles forces MapLibre to reload all tiles for this source,
+        // replacing transparent placeholders with real GEE data.
+        src?.setTiles([`env-tile://${layer}/{z}/{x}/{y}`]);
+      } catch (err) {
+        console.error(`GEE init failed for ${layer}:`, err);
+      }
+    }
+
+    initGee('ndvi', 'ndvi-source');
+    initGee('soilTemp', 'soil-temp-source');
+
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Load OSM road corridors ─────────────────────────
+  // Fetches /data/asuncion-roads.geojson once, re-initializes particles
+  // with real OSM road geometry.
+  useEffect(() => {
+    loadCorridors()
+      .then((corridors) => {
+        particlesRef.current = initParticles(corridors);
+      })
+      .catch((err) => {
+        console.warn('OSM roads not loaded, traffic particles disabled:', err.message);
+      });
+  }, []);
 
   // ── Initialize Deck.gl ──────────────────────────────
   useEffect(() => {
@@ -183,8 +258,6 @@ export default function MapView({ activeLayers, hour, onCoordsChange }: MapViewP
               id: 'traffic-particles',
               data: particlesRef.current,
               getPosition: (d: TrafficParticle) => d.position,
-              // Fix Bug 2: 'meters' made particles invisible at low zoom and
-              // giant at high zoom. 'pixels' keeps visual size constant.
               getRadius: 4,
               radiusUnits: 'pixels',
               getFillColor: particleColor(hour),
