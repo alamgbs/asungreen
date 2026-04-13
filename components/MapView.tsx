@@ -10,6 +10,7 @@ import { initParticles, updateParticles, particleColor, loadCorridors } from '@/
 import type { TrafficParticle } from '@/lib/types';
 import { applyNeonTheme } from '@/lib/mapStyle';
 import { getGeeTileUrl, geeTileUrlCache, geeTileTokenCache } from '@/lib/geeApi';
+import { AOIS, computeBbox } from '@/lib/aois';
 import { shouldUseLocalTile } from '@/lib/tileRouter';
 
 // 1×1 transparent PNG — returned for GEE tiles when the GEE URL is not yet loaded.
@@ -23,9 +24,11 @@ interface MapViewProps {
   onCoordsChange?: (lat: number, lng: number, zoom: number) => void;
   years: number[];
   seasons: string[];
+  selectedAoi: string | null;
+  onStatsChange: (layer: 'ndvi' | 'soilTemp', min: number, max: number) => void;
 }
 
-export default function MapView({ activeLayers, hour, onCoordsChange, years, seasons }: MapViewProps) {
+export default function MapView({ activeLayers, hour, onCoordsChange, years, seasons, selectedAoi, onStatsChange }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const deckCanvasRef   = useRef<HTMLCanvasElement>(null);
   const mapRef          = useRef<maplibregl.Map | null>(null);
@@ -145,16 +148,15 @@ export default function MapView({ activeLayers, hour, onCoordsChange, years, sea
   }, [activeLayers]);
 
   // ── Fetch / refresh GEE tile URLs ──────────────────
-  // Runs on mount and whenever years or seasons change.
-  // getGeeTileUrl caches by (layer, years, seasons) — only re-fetches on change.
-  // setTiles() forces MapLibre to reload tiles that were transparent placeholders.
+  // Runs on mount and whenever years, seasons, or selectedAoi change.
   useEffect(() => {
     let cancelled = false;
 
     async function refreshGee(layer: 'ndvi' | 'soilTemp', sourceId: string) {
       try {
-        await getGeeTileUrl(layer, years, seasons);
+        const result = await getGeeTileUrl(layer, years, seasons, selectedAoi ?? undefined);
         if (cancelled) return;
+        onStatsChange(layer, result.min, result.max);
         const m = mapRef.current;
         if (!m || !mapReadyRef.current) return;
         const src = m.getSource(sourceId) as maplibregl.RasterTileSource | undefined;
@@ -168,7 +170,18 @@ export default function MapView({ activeLayers, hour, onCoordsChange, years, sea
     refreshGee('soilTemp', 'soil-temp-source');
 
     return () => { cancelled = true; };
-  }, [years, seasons]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [years, seasons, selectedAoi]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── AOI camera zoom ─────────────────────────────────
+  // When selectedAoi changes to a non-null value, zoom the camera to fit the AOI.
+  useEffect(() => {
+    if (!selectedAoi) return;
+    const map = mapRef.current;
+    if (!map || !mapReadyRef.current) return;
+    const aoi = AOIS.find((a) => a.id === selectedAoi);
+    if (!aoi) return;
+    map.fitBounds(computeBbox(aoi.geometry), { padding: 40, duration: 800 });
+  }, [selectedAoi]);
 
   // ── Load OSM road corridors ─────────────────────────
   // Fetches /data/asuncion-roads.geojson once, re-initializes particles
