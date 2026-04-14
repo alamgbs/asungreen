@@ -159,7 +159,6 @@ export default function Sidebar({
         <div className="flex gap-1 flex-wrap">
           {/* GLOBAL pill — always first */}
           <button
-            key="global"
             onClick={() => onAoiChange(null)}
             style={{
               fontFamily:    'var(--font-pixel)',
@@ -195,7 +194,7 @@ export default function Sidebar({
                   transition:    'all 0.15s',
                 }}
               >
-                {aoi.label.toUpperCase().slice(0, 8)}
+                {aoi.shortLabel}
               </button>
             );
           })}

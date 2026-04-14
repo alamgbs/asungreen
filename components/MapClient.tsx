@@ -80,6 +80,11 @@ export default function MapClient() {
     [],
   );
 
+  const handleAoiChange = useCallback((id: string | null) => {
+    setSelectedAoi(id);
+    if (id === null) setGeeStats({});
+  }, []);
+
   return (
     <div
       className="relative w-full h-screen overflow-hidden"
@@ -106,7 +111,7 @@ export default function MapClient() {
         onYearsChange={setYears}
         onSeasonsChange={setSeasons}
         selectedAoi={selectedAoi}
-        onAoiChange={setSelectedAoi}
+        onAoiChange={handleAoiChange}
       />
       <Legend activeLayers={activeLayers} geeStats={geeStats} />
       <StatusBar lat={coords.lat} lng={coords.lng} zoom={coords.zoom} />

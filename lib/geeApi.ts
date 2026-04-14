@@ -23,6 +23,8 @@ export const geeTileTokenCache: Partial<Record<'ndvi' | 'soilTemp', string>> = {
 const geeParamCache: Partial<Record<'ndvi' | 'soilTemp', string>> = {};
 // Caches the full result (including min/max) by the same key.
 const geeResultCache: Partial<Record<'ndvi' | 'soilTemp', GeeLayerResult>> = {};
+// Monotonic request counter per layer — guards against stale writes from concurrent fetches.
+const geeRequestId: Partial<Record<'ndvi' | 'soilTemp', number>> = {};
 
 /**
  * Calls /api/gee-map to create a GEE visualization map.
@@ -42,6 +44,10 @@ export async function getGeeTileUrl(
     return geeResultCache[layer]!;
   }
 
+  // Increment request counter just before fetching.
+  const myId = (geeRequestId[layer] ?? 0) + 1;
+  geeRequestId[layer] = myId;
+
   const res = await fetch('/api/gee-map', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -56,10 +62,14 @@ export async function getGeeTileUrl(
   const data = (await res.json()) as { tileBaseUrl: string; token: string; min: number; max: number };
   const result: GeeLayerResult = { tileBaseUrl: data.tileBaseUrl, min: data.min, max: data.max };
 
-  geeTileUrlCache[layer]   = data.tileBaseUrl;
-  geeTileTokenCache[layer] = data.token;
-  geeParamCache[layer]     = key;
-  geeResultCache[layer]    = result;
+  // Only update the tile URL/token caches if this is still the latest request for this layer.
+  // A concurrent fetch with a newer AOI selection may have already resolved.
+  if (geeRequestId[layer] === myId) {
+    geeTileUrlCache[layer]   = data.tileBaseUrl;
+    geeTileTokenCache[layer] = data.token;
+  }
+  geeParamCache[layer]  = key;
+  geeResultCache[layer] = result;
 
   return result;
 }

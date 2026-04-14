@@ -7,16 +7,18 @@ export type GeoJsonPolygon = { type: 'Polygon'; coordinates: number[][][] };
 export type GeoJsonMultiPolygon = { type: 'MultiPolygon'; coordinates: number[][][][] };
 
 export interface Aoi {
-  id:       string;
-  label:    string;
-  geometry: GeoJsonPolygon | GeoJsonMultiPolygon;
-  zoom:     number;
+  id:         string;
+  label:      string;
+  shortLabel: string;  // ≤8 chars, used in compact pill display
+  geometry:   GeoJsonPolygon | GeoJsonMultiPolygon;
+  zoom:       number;
 }
 
 export const AOIS: Aoi[] = [
   {
     id: 'asuncion',
     label: 'Asunción',
+    shortLabel: 'ASU',
     zoom: 12,
     geometry: {
       type: 'Polygon',
@@ -30,6 +32,7 @@ export const AOIS: Aoi[] = [
   {
     id: 'central-py',
     label: 'Depto. Central',
+    shortLabel: 'CENTRAL',
     zoom: 10,
     geometry: {
       type: 'Polygon',
@@ -43,6 +46,7 @@ export const AOIS: Aoi[] = [
   {
     id: 'encarnacion',
     label: 'Encarnación',
+    shortLabel: 'ENCARN.',
     zoom: 13,
     geometry: {
       type: 'Polygon',
@@ -56,6 +60,7 @@ export const AOIS: Aoi[] = [
   {
     id: 'cde',
     label: 'Ciudad del Este',
+    shortLabel: 'CDE',
     zoom: 13,
     geometry: {
       type: 'Polygon',
@@ -69,6 +74,7 @@ export const AOIS: Aoi[] = [
   {
     id: 'buenos-aires',
     label: 'Buenos Aires',
+    shortLabel: 'BUE.AIR',
     zoom: 11,
     geometry: {
       type: 'Polygon',
@@ -82,6 +88,7 @@ export const AOIS: Aoi[] = [
   {
     id: 'rio',
     label: 'Río de Janeiro',
+    shortLabel: 'RIO',
     zoom: 11,
     geometry: {
       type: 'Polygon',
@@ -95,6 +102,7 @@ export const AOIS: Aoi[] = [
   {
     id: 'madrid',
     label: 'Madrid',
+    shortLabel: 'MADRID',
     zoom: 11,
     geometry: {
       type: 'Polygon',
@@ -108,6 +116,7 @@ export const AOIS: Aoi[] = [
   {
     id: 'barcelona',
     label: 'Barcelona',
+    shortLabel: 'BARNA',
     zoom: 12,
     geometry: {
       type: 'Polygon',
@@ -121,6 +130,7 @@ export const AOIS: Aoi[] = [
   {
     id: 'new-york',
     label: 'New York',
+    shortLabel: 'NYC',
     zoom: 11,
     geometry: {
       type: 'Polygon',
@@ -134,6 +144,7 @@ export const AOIS: Aoi[] = [
   {
     id: 'panama',
     label: 'Panamá City',
+    shortLabel: 'PANAMA',
     zoom: 12,
     geometry: {
       type: 'Polygon',
@@ -147,6 +158,7 @@ export const AOIS: Aoi[] = [
   {
     id: 'mexico-df',
     label: 'Ciudad de México',
+    shortLabel: 'MEX.DF',
     zoom: 11,
     geometry: {
       type: 'Polygon',
@@ -160,6 +172,7 @@ export const AOIS: Aoi[] = [
   {
     id: 'paris',
     label: 'París',
+    shortLabel: 'PARIS',
     zoom: 12,
     geometry: {
       type: 'Polygon',
@@ -173,6 +186,7 @@ export const AOIS: Aoi[] = [
   {
     id: 'heidelberg',
     label: 'Heidelberg',
+    shortLabel: 'HEIDELB',
     zoom: 13,
     geometry: {
       type: 'Polygon',
@@ -186,6 +200,7 @@ export const AOIS: Aoi[] = [
   {
     id: 'berlin',
     label: 'Berlín',
+    shortLabel: 'BERLIN',
     zoom: 11,
     geometry: {
       type: 'Polygon',
@@ -199,6 +214,7 @@ export const AOIS: Aoi[] = [
   {
     id: 'roma',
     label: 'Roma',
+    shortLabel: 'ROMA',
     zoom: 12,
     geometry: {
       type: 'Polygon',
