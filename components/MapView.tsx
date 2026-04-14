@@ -160,7 +160,12 @@ export default function MapView({ activeLayers, hour, onCoordsChange, years, sea
         const m = mapRef.current;
         if (!m || !mapReadyRef.current) return;
         const src = m.getSource(sourceId) as maplibregl.RasterTileSource | undefined;
-        src?.setTiles([`env-tile://${layer}/{z}/{x}/{y}`]);
+        try {
+          src?.setTiles([`env-tile://${layer}/{z}/{x}/{y}`]);
+        } catch {
+          // MapLibre race condition: AbortController not yet assigned on pending tile
+          // requests when setTiles() is called at startup. Harmless — tiles load correctly.
+        }
       } catch (err) {
         console.error(`GEE refresh failed for ${layer}:`, err);
       }
