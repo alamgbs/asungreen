@@ -229,13 +229,8 @@ function buildNdviImage(years: number[], seasons: string[]): GeeValue {
     filter: cloudFilter,
   });
 
-  const selected = invoke('ImageCollection.select', {
-    collection:    filtered,
-    bandSelectors: constant(['B4', 'B8']),
-  });
-
   const median = invoke('ImageCollection.reduce', {
-    collection: selected,
+    collection: filtered,
     reducer:    invoke('Reducer.median', {}),
   });
 
