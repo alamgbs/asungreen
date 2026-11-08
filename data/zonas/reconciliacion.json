@@ -1,0 +1,313 @@
+{
+  "generado": "2026-11-08",
+  "conteo": {
+    "pais": 1,
+    "departamento": 18,
+    "distrito": 247,
+    "ciudad": 11
+  },
+  "area_pais_km2": 400622,
+  "area_departamentos_km2": 400622,
+  "area_distritos_km2": 400622,
+  "distritos_sin_padre": [],
+  "poligonos_diminutos_omitidos": [
+    "PY-7-san-juan-de-parana",
+    "PY-7-san-juan-delparana"
+  ],
+  "ids_repetidos_resueltos": [],
+  "distritos_cruzan_depto": [],
+  "homonimos": {},
+  "geometrias_invalidas": [],
+  "distritos_por_departamento": {
+    "PY-ASU": 1,
+    "PY-1": 9,
+    "PY-2": 20,
+    "PY-3": 20,
+    "PY-4": 18,
+    "PY-5": 22,
+    "PY-6": 11,
+    "PY-7": 31,
+    "PY-8": 10,
+    "PY-9": 17,
+    "PY-10": 22,
+    "PY-11": 19,
+    "PY-12": 16,
+    "PY-13": 4,
+    "PY-14": 12,
+    "PY-15": 8,
+    "PY-19": 3,
+    "PY-16": 4
+  },
+  "tamanos_public": {
+    "pais": {
+      "porcentaje_vertices": 100,
+      "mb": 0.708
+    },
+    "departamento": {
+      "porcentaje_vertices": 20,
+      "mb": 1.031
+    },
+    "distrito": {
+      "porcentaje_vertices": 5,
+      "mb": 1.016
+    },
+    "ciudad": {
+      "porcentaje_vertices": 30,
+      "mb": 0.039
+    }
+  },
+  "aoi_geometrias_bytes": 90570,
+  "cotejo_wikipedia": {
+    "fuente": "es.wikipedia.org Anexo:Municipios de Paraguay (secundaria; 263 municipios según su texto)",
+    "departamentos": {
+      "Alto Paraguay": {
+        "id": "PY-16",
+        "wikipedia_declarados": 4,
+        "wikipedia_listados": 4,
+        "geoboundaries": 4,
+        "emparejados_por_ortografia": [],
+        "faltan_en_geoboundaries": [],
+        "sin_par_en_wikipedia": []
+      },
+      "Alto Paraná": {
+        "id": "PY-10",
+        "wikipedia_declarados": 22,
+        "wikipedia_listados": 22,
+        "geoboundaries": 22,
+        "emparejados_por_ortografia": [],
+        "faltan_en_geoboundaries": [],
+        "sin_par_en_wikipedia": []
+      },
+      "Amambay": {
+        "id": "PY-13",
+        "wikipedia_declarados": 6,
+        "wikipedia_listados": 6,
+        "geoboundaries": 4,
+        "emparejados_por_ortografia": [],
+        "faltan_en_geoboundaries": [
+          "Cerro Corá",
+          "Karapaí"
+        ],
+        "sin_par_en_wikipedia": []
+      },
+      "Asunción": {
+        "id": "PY-ASU",
+        "wikipedia_declarados": null,
+        "wikipedia_listados": 1,
+        "geoboundaries": 1,
+        "emparejados_por_ortografia": [],
+        "faltan_en_geoboundaries": [],
+        "sin_par_en_wikipedia": []
+      },
+      "Departamento de Boquerón": {
+        "id": "PY-19",
+        "wikipedia_declarados": 4,
+        "wikipedia_listados": 4,
+        "geoboundaries": 3,
+        "emparejados_por_ortografia": [],
+        "faltan_en_geoboundaries": [
+          "Boquerón"
+        ],
+        "sin_par_en_wikipedia": []
+      },
+      "Departamento de Caaguazú": {
+        "id": "PY-5",
+        "wikipedia_declarados": 22,
+        "wikipedia_listados": 22,
+        "geoboundaries": 22,
+        "emparejados_por_ortografia": [],
+        "faltan_en_geoboundaries": [],
+        "sin_par_en_wikipedia": []
+      },
+      "Departamento de Caazapá": {
+        "id": "PY-6",
+        "wikipedia_declarados": 11,
+        "wikipedia_listados": 11,
+        "geoboundaries": 11,
+        "emparejados_por_ortografia": [],
+        "faltan_en_geoboundaries": [],
+        "sin_par_en_wikipedia": []
+      },
+      "Canindeyú": {
+        "id": "PY-14",
+        "wikipedia_declarados": 16,
+        "wikipedia_listados": 16,
+        "geoboundaries": 12,
+        "emparejados_por_ortografia": [
+          [
+            "Yasy Cañy",
+            "Yasy Kañy"
+          ],
+          [
+            "Ypejhú",
+            "Ype Jhu"
+          ]
+        ],
+        "faltan_en_geoboundaries": [
+          "Laurel",
+          "Maracaná",
+          "Puerto Adela",
+          "Yby Pytá"
+        ],
+        "sin_par_en_wikipedia": []
+      },
+      "Departamento Central": {
+        "id": "PY-11",
+        "wikipedia_declarados": 19,
+        "wikipedia_listados": 19,
+        "geoboundaries": 19,
+        "emparejados_por_ortografia": [],
+        "faltan_en_geoboundaries": [],
+        "sin_par_en_wikipedia": []
+      },
+      "Departamento de Concepción (Paraguay)": {
+        "id": "PY-1",
+        "wikipedia_declarados": 13,
+        "wikipedia_listados": 14,
+        "geoboundaries": 9,
+        "emparejados_por_ortografia": [],
+        "faltan_en_geoboundaries": [
+          "Arroyito",
+          "Itacuá",
+          "Paso Barreto",
+          "Paso Horqueta",
+          "San Alfredo"
+        ],
+        "sin_par_en_wikipedia": []
+      },
+      "Departamento de Cordillera": {
+        "id": "PY-3",
+        "wikipedia_declarados": 20,
+        "wikipedia_listados": 20,
+        "geoboundaries": 20,
+        "emparejados_por_ortografia": [],
+        "faltan_en_geoboundaries": [],
+        "sin_par_en_wikipedia": []
+      },
+      "Departamento de Guairá": {
+        "id": "PY-4",
+        "wikipedia_declarados": 18,
+        "wikipedia_listados": 18,
+        "geoboundaries": 18,
+        "emparejados_por_ortografia": [
+          [
+            "Doctor Botrell",
+            "Dr. Bottrell"
+          ],
+          [
+            "José A. Fassardi",
+            "Jose Fassardi"
+          ]
+        ],
+        "faltan_en_geoboundaries": [],
+        "sin_par_en_wikipedia": []
+      },
+      "Departamento de Itapúa": {
+        "id": "PY-7",
+        "wikipedia_declarados": 30,
+        "wikipedia_listados": 30,
+        "geoboundaries": 31,
+        "emparejados_por_ortografia": [],
+        "faltan_en_geoboundaries": [
+          "Bella Vista"
+        ],
+        "sin_par_en_wikipedia": []
+      },
+      "Departamento de Misiones": {
+        "id": "PY-8",
+        "wikipedia_declarados": 10,
+        "wikipedia_listados": 10,
+        "geoboundaries": 10,
+        "emparejados_por_ortografia": [],
+        "faltan_en_geoboundaries": [],
+        "sin_par_en_wikipedia": []
+      },
+      "Departamento de Ñeembucú": {
+        "id": "PY-12",
+        "wikipedia_declarados": 16,
+        "wikipedia_listados": 16,
+        "geoboundaries": 16,
+        "emparejados_por_ortografia": [],
+        "faltan_en_geoboundaries": [],
+        "sin_par_en_wikipedia": []
+      },
+      "Departamento de Paraguarí": {
+        "id": "PY-9",
+        "wikipedia_declarados": 18,
+        "wikipedia_listados": 18,
+        "geoboundaries": 17,
+        "emparejados_por_ortografia": [
+          [
+            "Tebicuarymí",
+            "Tebicuary-mi"
+          ],
+          [
+            "Ybycuí",
+            "Yvycui"
+          ]
+        ],
+        "faltan_en_geoboundaries": [
+          "María Antonia"
+        ],
+        "sin_par_en_wikipedia": []
+      },
+      "Departamento de Presidente Hayes": {
+        "id": "PY-15",
+        "wikipedia_declarados": 10,
+        "wikipedia_listados": 10,
+        "geoboundaries": 8,
+        "emparejados_por_ortografia": [
+          [
+            "Teniente Primero Manuel Irala Fernández",
+            "Tte 1ro Manuel Irala Fernandez"
+          ]
+        ],
+        "faltan_en_geoboundaries": [
+          "Campo Aceval",
+          "Nueva Asunción"
+        ],
+        "sin_par_en_wikipedia": []
+      },
+      "Departamento de San Pedro (Paraguay)": {
+        "id": "PY-2",
+        "wikipedia_declarados": 22,
+        "wikipedia_listados": 22,
+        "geoboundaries": 20,
+        "emparejados_por_ortografia": [
+          [
+            "San Pedro de Ycuamandiyú",
+            "San Pedro del Ykuamandiyu"
+          ]
+        ],
+        "faltan_en_geoboundaries": [
+          "San José del Rosario",
+          "San Vicente Pancholo"
+        ],
+        "sin_par_en_wikipedia": []
+      }
+    },
+    "solo_en_wikipedia": [
+      "Amambay: Cerro Corá",
+      "Amambay: Karapaí",
+      "Departamento de Boquerón: Boquerón",
+      "Canindeyú: Laurel",
+      "Canindeyú: Maracaná",
+      "Canindeyú: Puerto Adela",
+      "Canindeyú: Yby Pytá",
+      "Departamento de Concepción (Paraguay): Arroyito",
+      "Departamento de Concepción (Paraguay): Itacuá",
+      "Departamento de Concepción (Paraguay): Paso Barreto",
+      "Departamento de Concepción (Paraguay): Paso Horqueta",
+      "Departamento de Concepción (Paraguay): San Alfredo",
+      "Departamento de Itapúa: Bella Vista",
+      "Departamento de Paraguarí: María Antonia",
+      "Departamento de Presidente Hayes: Campo Aceval",
+      "Departamento de Presidente Hayes: Nueva Asunción",
+      "Departamento de San Pedro (Paraguay): San José del Rosario",
+      "Departamento de San Pedro (Paraguay): San Vicente Pancholo"
+    ],
+    "solo_en_geoboundaries": [],
+    "total_wikipedia_listados": 263,
+    "total_geoboundaries": 247
+  }
+}

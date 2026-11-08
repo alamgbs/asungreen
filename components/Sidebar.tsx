@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Thermometer, Car, TreePine, ChevronUp, ChevronDown } from 'lucide-react';
 import type { LayerType } from '@/lib/types';
-import { AOIS } from '@/lib/aois';
+import ZonaSelector from './ZonaSelector';
 import { TRAFFIC_BY_HOUR } from '@/lib/constants';
 import { LAYER_INFO, SIM_BADGE } from '@/lib/layerInfo';
 
@@ -17,8 +17,8 @@ interface SidebarProps {
   seasons: string[];
   onYearsChange: (years: number[]) => void;
   onSeasonsChange: (seasons: string[]) => void;
-  selectedAoi: string | null;
-  onAoiChange: (id: string | null) => void;
+  selectedZona: string | null;
+  onZonaChange: (id: string | null) => void;
   onOpenMethodology: () => void;
 }
 
@@ -77,8 +77,8 @@ export default function Sidebar({
   seasons,
   onYearsChange,
   onSeasonsChange,
-  selectedAoi,
-  onAoiChange,
+  selectedZona,
+  onZonaChange,
   onOpenMethodology,
 }: SidebarProps) {
   // Solo aplica en móvil (< 768px); en escritorio el CSS ignora el estado.
@@ -92,11 +92,6 @@ export default function Sidebar({
   function toggleSeason(s: string) {
     if (seasons.includes(s) && seasons.length === 1) return;
     onSeasonsChange(seasons.includes(s) ? seasons.filter(v => v !== s) : [...seasons, s]);
-  }
-
-  function handleAoiClick(id: string) {
-    // Radio-select: clicking the active AOI deselects (returns to GLOBAL)
-    onAoiChange(selectedAoi === id ? null : id);
   }
 
   const showTemporalFilter = activeLayers.ndvi || activeLayers.soilTemp;
@@ -138,43 +133,8 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* ── AOI Filter ─────────────────────────────────── */}
-      <div className="terminal-panel fade-in-up" role="group" aria-labelledby="aoi-title">
-        <div id="aoi-title" style={{ ...SECTION_TITLE, color: 'var(--neon-cyan)', textShadow: 'var(--glow-cyan)' }}>
-          &gt; ZONA
-        </div>
-        <div className="flex gap-1.5 flex-wrap">
-          <button
-            type="button"
-            className="pill-btn"
-            onClick={() => onAoiChange(null)}
-            aria-pressed={selectedAoi === null}
-            aria-label="Zona: global (todo el mapa)"
-            style={pillStyle(selectedAoi === null, 'var(--neon-cyan)', 'var(--glow-cyan)')}
-          >
-            GLOBAL
-          </button>
-          {AOIS.map((aoi) => {
-            const active = selectedAoi === aoi.id;
-            return (
-              <button
-                key={aoi.id}
-                type="button"
-                className="pill-btn"
-                onClick={() => handleAoiClick(aoi.id)}
-                aria-pressed={active}
-                aria-label={`Zona: ${aoi.label}`}
-                style={pillStyle(active, 'var(--neon-cyan)', 'var(--glow-cyan)')}
-              >
-                {aoi.shortLabel}
-              </button>
-            );
-          })}
-        </div>
-        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-          Las zonas son aproximaciones rectangulares, no límites oficiales.
-        </p>
-      </div>
+      {/* ── Zona (selector + buscador) ─────────────── */}
+      <ZonaSelector selectedZona={selectedZona} onZonaChange={onZonaChange} />
 
       {/* ── Layer cards ────────────────────────────── */}
       <div className="flex flex-col gap-1.5">

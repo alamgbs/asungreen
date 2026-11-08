@@ -10,7 +10,8 @@
  */
 
 import { NextResponse } from 'next/server';
-import { AOIS, type Aoi } from '@/lib/aois';
+import type { Aoi } from '@/lib/aois';
+import { findAoi } from '@/lib/zonasServer';
 import { LAYER_VALUE_RANGE } from '@/lib/constants';
 import { GEE_V1, loadServiceAccount, getAccessToken, clientIp, rateLimit } from '@/app/api/_lib/gee';
 
@@ -298,7 +299,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Capa inválida' }, { status: 400 });
     }
 
-    const aoi = aoiId !== undefined ? AOIS.find((a) => a.id === aoiId) : undefined;
+    const aoi = aoiId !== undefined ? findAoi(aoiId) : undefined;
     if (aoiId !== undefined && !aoi) {
       return NextResponse.json({ error: `aoiId desconocido: ${aoiId}` }, { status: 400 });
     }

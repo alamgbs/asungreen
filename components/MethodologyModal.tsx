@@ -85,11 +85,13 @@ export default function MethodologyModal({ onClose }: { onClose: () => void }) {
 
         <section style={{ borderLeft: '3px solid var(--sim-color)', paddingLeft: '12px' }}>
           <h3 style={{ margin: '0 0 6px', ...TXT, fontSize: '14px', fontWeight: 700, color: 'var(--sim-color)' }}>
-            Zonas (AOI)
+            Zonas y límites
           </h3>
           <p style={{ ...TXT, margin: 0, color: 'var(--text-primary)' }}>
-            Las zonas actuales son aproximaciones rectangulares de los territorios, no los límites administrativos
-            oficiales. Las estadísticas por zona incluyen áreas fuera del municipio o departamento real.
+            Paraguay: departamentos y 247 distritos de geoBoundaries (CC BY 4.0; fuente DGEEC, año 2012), simplificados para el mapa.
+            Faltan 18 distritos que aparecen en listados más recientes y se muestran sin límite. Ciudades de otros países:
+            límite municipal de OpenStreetMap (© colaboradores de OpenStreetMap, ODbL); «Panamá» es el distrito completo,
+            no solo el casco urbano. Los límites son orientativos, no oficiales.
           </p>
         </section>
       </div>

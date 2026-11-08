@@ -1,3 +1,5 @@
+import { rangoMinMax } from './indicadores';
+
 export const ASUNCION_CENTER: [number, number] = [-57.5759, -25.2867];
 
 export const INITIAL_VIEW_STATE = {
@@ -24,6 +26,6 @@ export const TRAFFIC_BY_HOUR: number[] = [
 // Fixed colour scale shared by every AOI so zones are visually comparable
 // (no per-AOI percentile stretch). LST is in °C ("soilTemp" id kept for compat).
 export const LAYER_VALUE_RANGE = {
-  ndvi:     { min: -0.2, max: 0.8 },
-  soilTemp: { min: 15,   max: 50 },
+  ndvi:     rangoMinMax('ndvi'),
+  soilTemp: rangoMinMax('lst'),
 } as const;

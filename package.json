@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "series:sync": "node scripts/pipeline/sync-public.mjs",
+    "predev": "npm run series:sync",
+    "prebuild": "npm run series:sync",
+    "pipeline:open": "node scripts/pipeline/open/run.mjs"
   },
   "dependencies": {
     "@deck.gl/core": "^9.2.11",

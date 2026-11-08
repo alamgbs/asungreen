@@ -45,7 +45,7 @@ export default function MapClient({ initial }: { initial: MapUrlState }) {
   const [hour, setHour]       = useState(initial.hour);
   const [years, setYears]     = useState<number[]>(initial.years);
   const [seasons, setSeasons] = useState<string[]>(initial.seasons);
-  const [selectedAoi, setSelectedAoi] = useState<string | null>(initial.aoi);
+  const [selectedZona, setSelectedZona] = useState<string | null>(initial.zona);
   const [showMethod, setShowMethod] = useState(false);
   const [geeStats, setGeeStats] = useState<
     Partial<Record<'ndvi' | 'soilTemp', { min: number; max: number }>>
@@ -58,12 +58,12 @@ export default function MapClient({ initial }: { initial: MapUrlState }) {
 
   // ── Estado → URL (debounce, history.replaceState) ───
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const stateRef = useRef({ selectedAoi, activeLayers, years, seasons, hour });
+  const stateRef = useRef({ selectedZona, activeLayers, years, seasons, hour });
 
   const flushUrl = useCallback(() => {
     const st = stateRef.current;
     const qs = serializeMapState(
-      { aoi: st.selectedAoi, layers: st.activeLayers, years: st.years, seasons: st.seasons,
+      { zona: st.selectedZona, layers: st.activeLayers, years: st.years, seasons: st.seasons,
         hour: st.hour, view: viewRef.current ?? initial.view },
       viewRef.current !== null,
     );
@@ -79,9 +79,9 @@ export default function MapClient({ initial }: { initial: MapUrlState }) {
   }, [flushUrl]);
 
   useEffect(() => {
-    stateRef.current = { selectedAoi, activeLayers, years, seasons, hour };
+    stateRef.current = { selectedZona, activeLayers, years, seasons, hour };
     scheduleUrlWrite();
-  }, [selectedAoi, activeLayers, years, seasons, hour, scheduleUrlWrite]);
+  }, [selectedZona, activeLayers, years, seasons, hour, scheduleUrlWrite]);
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
@@ -104,8 +104,8 @@ export default function MapClient({ initial }: { initial: MapUrlState }) {
     [],
   );
 
-  const handleAoiChange = useCallback((id: string | null) => {
-    setSelectedAoi(id);
+  const handleZonaChange = useCallback((id: string | null) => {
+    setSelectedZona(id);
     if (id === null) setGeeStats({});
   }, []);
 
@@ -122,7 +122,8 @@ export default function MapClient({ initial }: { initial: MapUrlState }) {
         onCoordsChange={handleCoordsChange}
         years={years}
         seasons={seasons}
-        selectedAoi={selectedAoi}
+        selectedZona={selectedZona}
+        onZonaClick={handleZonaChange}
         onStatsChange={handleStatsChange}
       />
       <Header onOpenMethodology={() => setShowMethod(true)} />
@@ -136,8 +137,8 @@ export default function MapClient({ initial }: { initial: MapUrlState }) {
         seasons={seasons}
         onYearsChange={setYears}
         onSeasonsChange={setSeasons}
-        selectedAoi={selectedAoi}
-        onAoiChange={handleAoiChange}
+        selectedZona={selectedZona}
+        onZonaChange={handleZonaChange}
         onOpenMethodology={() => setShowMethod(true)}
       />
       <Legend activeLayers={activeLayers} geeStats={geeStats} />

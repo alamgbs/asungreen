@@ -1,7 +1,12 @@
-// lib/aois.ts
-// AOI (Area of Interest) catalog — 15 city/region polygons.
-// Geometries are simplified rectangular approximations of GADM administrative
-// boundaries. Replace coordinates with actual GADM data for higher fidelity.
+// lib/aois.ts — alias COMPATIBLE de las "AOI" originales, ahora derivado de las zonas reales.
+// Mantiene los 15 ids históricos (asuncion, central-py, madrid, …) y su forma `Aoi` con geometría,
+// porque /api/gee-map y /reportes los usan. El código nuevo debe usar lib/zonas.ts.
+//
+// Las geometrías (data/zonas/aoi-geometrias.json, ~90 KB) son los límites reales muy simplificados:
+// van en línea hacia Earth Engine, así que se mantienen pequeñas. Las geometrías del resto de las
+// zonas se resuelven en el servidor con lib/zonasServer.ts.
+import aoiGeoms from '../data/zonas/aoi-geometrias.json';
+import { ZONAS } from './zonas';
 
 export type GeoJsonPolygon = { type: 'Polygon'; coordinates: number[][][] };
 export type GeoJsonMultiPolygon = { type: 'MultiPolygon'; coordinates: number[][][][] };
@@ -10,239 +15,29 @@ export interface Aoi {
   id:         string;
   label:      string;
   shortLabel: string;  // ≤8 chars, used in compact pill display
-  /** Hemisphere decides which months map to each season (see /api/gee-map). Matches the sign of the AOI latitude. */
+  /** Hemisphere decides which months map to each season (see /api/gee-map). */
   hemisphere: 'S' | 'N';
   geometry:   GeoJsonPolygon | GeoJsonMultiPolygon;
   zoom:       number;
+  /** Id de la zona real correspondiente (lib/zonas.ts). */
+  zonaId?:    string;
 }
 
-export const AOIS: Aoi[] = [
-  {
-    id: 'asuncion',
-    hemisphere: 'S',
-    label: 'Asunción',
-    shortLabel: 'ASU',
-    zoom: 12,
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[
-        [-57.720, -25.396], [-57.472, -25.396],
-        [-57.472, -25.187], [-57.720, -25.187],
-        [-57.720, -25.396],
-      ]],
-    },
-  },
-  {
-    id: 'central-py',
-    hemisphere: 'S',
-    label: 'Depto. Central',
-    shortLabel: 'CENTRAL',
-    zoom: 10,
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[
-        [-58.150, -25.700], [-56.950, -25.700],
-        [-56.950, -25.100], [-58.150, -25.100],
-        [-58.150, -25.700],
-      ]],
-    },
-  },
-  {
-    id: 'encarnacion',
-    hemisphere: 'S',
-    label: 'Encarnación',
-    shortLabel: 'ENCARN.',
-    zoom: 13,
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[
-        [-55.953, -27.420], [-55.790, -27.420],
-        [-55.790, -27.278], [-55.953, -27.278],
-        [-55.953, -27.420],
-      ]],
-    },
-  },
-  {
-    id: 'cde',
-    hemisphere: 'S',
-    label: 'Ciudad del Este',
-    shortLabel: 'CDE',
-    zoom: 13,
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[
-        [-54.684, -25.572], [-54.545, -25.572],
-        [-54.545, -25.468], [-54.684, -25.468],
-        [-54.684, -25.572],
-      ]],
-    },
-  },
-  {
-    id: 'buenos-aires',
-    hemisphere: 'S',
-    label: 'Buenos Aires',
-    shortLabel: 'BUE.AIR',
-    zoom: 11,
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[
-        [-58.531, -34.706], [-58.335, -34.706],
-        [-58.335, -34.527], [-58.531, -34.527],
-        [-58.531, -34.706],
-      ]],
-    },
-  },
-  {
-    id: 'rio',
-    hemisphere: 'S',
-    label: 'Río de Janeiro',
-    shortLabel: 'RIO',
-    zoom: 11,
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[
-        [-43.796, -23.083], [-43.099, -23.083],
-        [-43.099, -22.742], [-43.796, -22.742],
-        [-43.796, -23.083],
-      ]],
-    },
-  },
-  {
-    id: 'madrid',
-    hemisphere: 'N',
-    label: 'Madrid',
-    shortLabel: 'MADRID',
-    zoom: 11,
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[
-        [-3.848, 40.313], [-3.524, 40.313],
-        [-3.524, 40.561], [-3.848, 40.561],
-        [-3.848, 40.313],
-      ]],
-    },
-  },
-  {
-    id: 'barcelona',
-    hemisphere: 'N',
-    label: 'Barcelona',
-    shortLabel: 'BARNA',
-    zoom: 12,
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[
-        [2.052, 41.320], [2.228, 41.320],
-        [2.228, 41.469], [2.052, 41.469],
-        [2.052, 41.320],
-      ]],
-    },
-  },
-  {
-    id: 'new-york',
-    hemisphere: 'N',
-    label: 'New York',
-    shortLabel: 'NYC',
-    zoom: 11,
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[
-        [-74.259, 40.477], [-73.700, 40.477],
-        [-73.700, 40.917], [-74.259, 40.917],
-        [-74.259, 40.477],
-      ]],
-    },
-  },
-  {
-    id: 'panama',
-    hemisphere: 'N',
-    label: 'Panamá City',
-    shortLabel: 'PANAMA',
-    zoom: 12,
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[
-        [-79.602, 8.897], [-79.453, 8.897],
-        [-79.453, 9.051], [-79.602, 9.051],
-        [-79.602, 8.897],
-      ]],
-    },
-  },
-  {
-    id: 'mexico-df',
-    hemisphere: 'N',
-    label: 'Ciudad de México',
-    shortLabel: 'MEX.DF',
-    zoom: 11,
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[
-        [-99.366, 19.183], [-98.940, 19.183],
-        [-98.940, 19.592], [-99.366, 19.592],
-        [-99.366, 19.183],
-      ]],
-    },
-  },
-  {
-    id: 'paris',
-    hemisphere: 'N',
-    label: 'París',
-    shortLabel: 'PARIS',
-    zoom: 12,
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[
-        [2.224, 48.815], [2.470, 48.815],
-        [2.470, 48.902], [2.224, 48.902],
-        [2.224, 48.815],
-      ]],
-    },
-  },
-  {
-    id: 'heidelberg',
-    hemisphere: 'N',
-    label: 'Heidelberg',
-    shortLabel: 'HEIDELB',
-    zoom: 13,
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[
-        [8.618, 49.351], [8.771, 49.351],
-        [8.771, 49.460], [8.618, 49.460],
-        [8.618, 49.351],
-      ]],
-    },
-  },
-  {
-    id: 'berlin',
-    hemisphere: 'N',
-    label: 'Berlín',
-    shortLabel: 'BERLIN',
-    zoom: 11,
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[
-        [13.088, 52.338], [13.761, 52.338],
-        [13.761, 52.675], [13.088, 52.675],
-        [13.088, 52.338],
-      ]],
-    },
-  },
-  {
-    id: 'roma',
-    hemisphere: 'N',
-    label: 'Roma',
-    shortLabel: 'ROMA',
-    zoom: 12,
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[
-        [12.352, 41.783], [12.648, 41.783],
-        [12.648, 41.987], [12.352, 41.987],
-        [12.352, 41.783],
-      ]],
-    },
-  },
-];
+const GEOMS = aoiGeoms as unknown as Record<string, Aoi['geometry']>;
+
+export const AOIS: Aoi[] = Object.keys(GEOMS).flatMap((legacyId) => {
+  const z = ZONAS.find((x) => x.aliases?.includes(legacyId));
+  if (!z) return [];
+  return [{
+    id: legacyId,
+    label: z.nombre === 'Central' ? 'Depto. Central' : z.nombre,
+    shortLabel: z.etiquetaCorta ?? legacyId.slice(0, 8).toUpperCase(),
+    hemisphere: z.hemisferio,
+    geometry: GEOMS[legacyId],
+    zoom: z.zoom ?? 12,
+    zonaId: z.id,
+  }];
+});
 
 /**
  * Computes the bounding box of a GeoJSON polygon or multipolygon.

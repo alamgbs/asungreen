@@ -1,14 +1,16 @@
 /**
  * Estado compartible del mapa en la query string.
- * Claves: aoi, layers, years, seasons, hour, lat, lng, z.
- * (/reportes enlaza con `aoi` y `layers`.)
+ * Claves: zona, layers, years, seasons, hour, lat, lng, z.
+ * `aoi` se sigue ACEPTANDO al leer (enlaces viejos y /reportes: `?aoi=asuncion`); al escribir se usa `zona`.
+ * Ambas aceptan ids de zona (`PY-11-luque`) o ids antiguos (`asuncion`, `madrid`).
  */
 import type { LayerType } from './types';
-import { AOIS } from './aois';
+import { resolverZonaId } from './zonas';
 import { INITIAL_VIEW_STATE } from './constants';
 
 export interface MapUrlState {
-  aoi: string | null;
+  /** Id canónico de zona (lib/zonas.ts) o null = global. */
+  zona: string | null;
   layers: Record<LayerType, boolean>;
   years: number[];
   seasons: string[];
@@ -38,7 +40,7 @@ export function currentSeason(): string {
 
 export function defaultMapState(): MapUrlState {
   return {
-    aoi: null,
+    zona: null,
     layers: { ...DEFAULT_LAYERS },
     years: [new Date().getFullYear()],
     seasons: [currentSeason()],
@@ -70,8 +72,7 @@ const num = (s: string | undefined): number | null => {
 export function parseMapState(p: Params): MapUrlState {
   const s = defaultMapState();
 
-  const aoi = get(p, 'aoi');
-  if (aoi && AOIS.some((a) => a.id === aoi)) s.aoi = aoi;
+  s.zona = resolverZonaId(get(p, 'zona')) ?? resolverZonaId(get(p, 'aoi'));
 
   const layers = get(p, 'layers');
   if (layers !== undefined) {
@@ -113,7 +114,7 @@ const sameSet = (a: (string | number)[], b: (string | number)[]) =>
 export function serializeMapState(st: Omit<MapUrlState, 'hasView'>, includeView: boolean): string {
   const d = defaultMapState();
   const q = new URLSearchParams();
-  if (st.aoi) q.set('aoi', st.aoi);
+  if (st.zona) q.set('zona', st.zona);
   if (LAYER_IDS.some((l) => st.layers[l] !== d.layers[l])) {
     q.set('layers', LAYER_IDS.filter((l) => st.layers[l]).join(','));
   }
