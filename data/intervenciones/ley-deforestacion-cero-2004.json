@@ -1,0 +1,78 @@
+{
+  "id": "ley-deforestacion-cero-2004",
+  "nombre": "Ley de Deforestación Cero en la Región Oriental (Ley 2524/04)",
+  "tipo": "positiva",
+  "resumen": "Desde diciembre de 2004 la Región Oriental prohíbe convertir bosque a uso agropecuario o urbano. Se compara el NDVI anual de los departamentos orientales con el del Chaco, que la ley no cubría.",
+  "pais": "PY",
+  "zonasTratadas": ["PY-1", "PY-2", "PY-3", "PY-4", "PY-5", "PY-6", "PY-7", "PY-8", "PY-9", "PY-10", "PY-11", "PY-12", "PY-13", "PY-14"],
+  "centro": null,
+  "geometria": null,
+  "inicio": "2004-12-13",
+  "fechaConfianza": "alta",
+  "fechaNota": "13-12-2004 es la fecha de promulgación según la BACN; la publicación es del 16-12-2004. La prohibición inicial era por 2 años y se prorrogó varias veces (Leyes 3139/06, 3663/08, 5045/13, 6256/18 y 6676/20); la última figura promulgada el 11-12-2020.",
+  "fuentes": [
+    {
+      "titulo": "Ley Nº 2524 / Prohibición en la Región Oriental de las actividades de transformación y conversión de superficies con cobertura de bosques",
+      "url": "https://www.bacn.gov.py/leyes-paraguayas/3507/ley-n-2524-prohibi-cion-en-la-region-oriental-de-las-actividades-de-transformacion-y-conversion-de-superfi-cies-con-cobertura-de-bosques",
+      "publicador": "Biblioteca y Archivo Central del Congreso Nacional (BACN)",
+      "tipo": "oficial",
+      "fechaConsulta": "2026-11-08",
+      "respalda": ["fecha", "ubicacion"],
+      "extracto": "\"Fecha de Promulgación: 13-12-2004. Fecha de Publicación: 16-12-2004.\" Art. 2: a partir de la promulgación, por un período inicial de dos años, se prohíbe en la Región Oriental transformar o convertir superficies con cobertura de bosques a uso agropecuario o a asentamientos humanos."
+    },
+    {
+      "titulo": "Ley Nº 6676 / Prohíbe las actividades de transformación y conversión de superficies con cobertura de bosques en la Región Oriental",
+      "url": "https://www.bacn.gov.py/leyes-paraguayas/9496/ley-n-6676-prohibe-las-actividades-de-transformacion-y-conversion-de-superficies-con-cobertura-de-bosques-en-la-region-oriental",
+      "publicador": "Biblioteca y Archivo Central del Congreso Nacional (BACN)",
+      "tipo": "oficial",
+      "fechaConsulta": "2026-11-08",
+      "respalda": ["fecha"],
+      "extracto": "\"Fecha de Promulgación: 11-12-2020.\" Continuación de la prohibición para la Región Oriental."
+    },
+    {
+      "titulo": "Senado aprobó vigencia de ley de deforestación cero por 10 años más",
+      "url": "https://www.abc.com.py/nacionales/2020/12/03/senado-aprobo-vigencia-de-ley-de-desforestacion-cero-por-10-anos-mas/",
+      "publicador": "ABC Color",
+      "tipo": "prensa",
+      "fechaPublicacion": "2020-12-03",
+      "fechaConsulta": "2026-11-08",
+      "respalda": ["fecha"],
+      "extracto": "Indica que la ley \"fue promulgada en 2004\" y que la prórroga busca extender su vigencia por otros diez años. Nombra la ley como 6256; la numeración oficial de la BACN es 2524 (2004) y 6676 (2020)."
+    }
+  ],
+  "indicadores": [
+    {
+      "id": "ndvi-modis",
+      "direccionEsperada": "indefinida",
+      "adecuacionSensor": "limitada",
+      "nota": "El NDVI medio anual de un departamento mezcla bosque, cultivos y pastura; convertir bosque en soja no siempre baja el NDVI anual. Es un indicador grueso, no una medición de superficie boscosa."
+    }
+  ],
+  "ventanaAntes": { "inicio": "2000-01", "fin": "2003-12" },
+  "ventanaExcluida": { "inicio": "2004-01", "fin": "2006-12" },
+  "ventanaDespues": { "inicio": "2007-01", "fin": "2013-12" },
+  "estacionalidad": "anual",
+  "control": {
+    "tipo": "zona-vecina-similar",
+    "zonaIds": ["PY-15", "PY-16", "PY-19"],
+    "criterio": "Los tres departamentos del Chaco (Presidente Hayes, Alto Paraguay, Boquerón) están en la Región Occidental, a la que la Ley 2524 no se aplica (el Art. 2 la limita a la Región Oriental). Son vecinos, pero con otro clima, suelo y régimen de uso de la tierra, así que la comparación es débil.",
+    "pretendenciaParalela": "no-verificada"
+  },
+  "advertencias": [
+    "Solo hay 3 años completos de datos MODIS antes de la ley (2001-2003; la serie empieza en febrero de 2000), así que no se puede comprobar bien si las tendencias previas eran paralelas.",
+    "Oriente y Chaco difieren en clima, suelo y cultivos: aunque el contraste dé un número, no demuestra que la ley haya cambiado nada.",
+    "El Chaco también cambió en esos años (expansión ganadera): el 'control' no está libre de intervención.",
+    "La fiscalización de la ley fue desigual según la prensa; que exista una norma no implica que se cumpliera en todo el territorio.",
+    "Los departamentos Central y Asunción entran en la zona tratada por estar en la Región Oriental, aunque son mayormente urbanos."
+  ],
+  "estado": "verificada",
+  "verificacion": {
+    "verificadoEl": "2026-11-08",
+    "notas": [
+      "Fecha de promulgación (13-12-2004) y alcance (Región Oriental) leídos en el texto oficial de la BACN.",
+      "La numeración que da la prensa varía (2524, 6256, 6676): son distintas leyes de la cadena de prórrogas; la original es la 2524/04.",
+      "Indicador: NDVI MODIS anual por departamento (data/series, desde 2000). La serie de los departamentos del Chaco (PY-15, PY-16, PY-19) no estaba generada al momento de la verificación: el contraste queda en null hasta que el pipeline la escriba."
+    ]
+  },
+  "mapa": { "capa": "ndvi", "anios": [2004] }
+}

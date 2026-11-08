@@ -5,8 +5,11 @@ import dynamic from 'next/dynamic';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import Legend from './Legend';
+import TimeSlider from './TimeSlider';
 import StatusBar from './StatusBar';
 import MethodologyModal from './MethodologyModal';
+import { PanelZona, Comparar } from './zona';
+import { MAX_COMPARAR } from '@/lib/comparar';
 import type { LayerType } from '@/lib/types';
 import { serializeMapState, type MapUrlState } from '@/lib/urlState';
 
@@ -47,6 +50,9 @@ export default function MapClient({ initial }: { initial: MapUrlState }) {
   const [seasons, setSeasons] = useState<string[]>(initial.seasons);
   const [selectedZona, setSelectedZona] = useState<string | null>(initial.zona);
   const [showMethod, setShowMethod] = useState(false);
+  // Modo comparar: null = cerrado; lista = abierto (URL ?comparar=a,b,c). Panel de zona: oculto con la X.
+  const [comparar, setComparar] = useState<string[] | null>(initial.comparar);
+  const [panelOculto, setPanelOculto] = useState(false);
   const [geeStats, setGeeStats] = useState<
     Partial<Record<'ndvi' | 'soilTemp', { min: number; max: number }>>
   >({});
@@ -58,12 +64,12 @@ export default function MapClient({ initial }: { initial: MapUrlState }) {
 
   // ── Estado → URL (debounce, history.replaceState) ───
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const stateRef = useRef({ selectedZona, activeLayers, years, seasons, hour });
+  const stateRef = useRef({ selectedZona, comparar, activeLayers, years, seasons, hour });
 
   const flushUrl = useCallback(() => {
     const st = stateRef.current;
     const qs = serializeMapState(
-      { zona: st.selectedZona, layers: st.activeLayers, years: st.years, seasons: st.seasons,
+      { zona: st.selectedZona, comparar: st.comparar, layers: st.activeLayers, years: st.years, seasons: st.seasons,
         hour: st.hour, view: viewRef.current ?? initial.view },
       viewRef.current !== null,
     );
@@ -79,9 +85,9 @@ export default function MapClient({ initial }: { initial: MapUrlState }) {
   }, [flushUrl]);
 
   useEffect(() => {
-    stateRef.current = { selectedZona, activeLayers, years, seasons, hour };
+    stateRef.current = { selectedZona, comparar, activeLayers, years, seasons, hour };
     scheduleUrlWrite();
-  }, [selectedZona, activeLayers, years, seasons, hour, scheduleUrlWrite]);
+  }, [selectedZona, comparar, activeLayers, years, seasons, hour, scheduleUrlWrite]);
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
@@ -106,8 +112,23 @@ export default function MapClient({ initial }: { initial: MapUrlState }) {
 
   const handleZonaChange = useCallback((id: string | null) => {
     setSelectedZona(id);
+    setPanelOculto(false);
     if (id === null) setGeeStats({});
   }, []);
+
+  // Clic en el mapa: con el modo comparar abierto agrega la zona; si no, la selecciona.
+  const handleMapaClick = useCallback((id: string) => {
+    if (comparar !== null) {
+      setComparar((c) => (c && !c.includes(id) && c.length < MAX_COMPARAR ? [...c, id] : c));
+      return;
+    }
+    handleZonaChange(id);
+  }, [comparar, handleZonaChange]);
+
+  const abrirComparar = useCallback((id?: string | null) => {
+    const base = id ?? selectedZona;
+    setComparar(base ? [base] : []);
+  }, [selectedZona]);
 
   return (
     <div
@@ -123,7 +144,7 @@ export default function MapClient({ initial }: { initial: MapUrlState }) {
         years={years}
         seasons={seasons}
         selectedZona={selectedZona}
-        onZonaClick={handleZonaChange}
+        onZonaClick={handleMapaClick}
         onStatsChange={handleStatsChange}
       />
       <Header onOpenMethodology={() => setShowMethod(true)} />
@@ -140,8 +161,17 @@ export default function MapClient({ initial }: { initial: MapUrlState }) {
         selectedZona={selectedZona}
         onZonaChange={handleZonaChange}
         onOpenMethodology={() => setShowMethod(true)}
+        comparando={comparar !== null}
+        onComparar={() => (comparar === null ? abrirComparar() : setComparar(null))}
       />
+      {comparar === null && selectedZona && !panelOculto && (
+        <PanelZona zonaId={selectedZona} onCerrar={() => setPanelOculto(true)} onComparar={abrirComparar} />
+      )}
+      {comparar !== null && (
+        <Comparar ids={comparar} onChange={setComparar} onCerrar={() => setComparar(null)} />
+      )}
       <Legend activeLayers={activeLayers} geeStats={geeStats} />
+      <TimeSlider zonaId={selectedZona} years={years} onYearsChange={setYears} liveLayers={activeLayers.ndvi || activeLayers.soilTemp} />
       <StatusBar lat={coords.lat} lng={coords.lng} zoom={coords.zoom} />
       {showMethod && <MethodologyModal onClose={() => setShowMethod(false)} />}
     </div>

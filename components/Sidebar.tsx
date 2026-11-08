@@ -20,6 +20,9 @@ interface SidebarProps {
   selectedZona: string | null;
   onZonaChange: (id: string | null) => void;
   onOpenMethodology: () => void;
+  /** Modo comparar (panel de zonas lado a lado). */
+  comparando?: boolean;
+  onComparar?: () => void;
 }
 
 const SEASON_LABELS: { id: string; label: string; full: string }[] = [
@@ -80,6 +83,8 @@ export default function Sidebar({
   selectedZona,
   onZonaChange,
   onOpenMethodology,
+  comparando,
+  onComparar,
 }: SidebarProps) {
   // Solo aplica en móvil (< 768px); en escritorio el CSS ignora el estado.
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -135,6 +140,17 @@ export default function Sidebar({
 
       {/* ── Zona (selector + buscador) ─────────────── */}
       <ZonaSelector selectedZona={selectedZona} onZonaChange={onZonaChange} />
+      {onComparar && (
+        <button
+          type="button"
+          className="pill-btn"
+          onClick={onComparar}
+          aria-pressed={!!comparando}
+          style={{ width: '100%', color: 'var(--neon-cyan)', borderColor: 'var(--neon-cyan)', background: comparando ? 'var(--neon-cyan)22' : undefined }}
+        >
+          {comparando ? 'Cerrar comparación' : 'Comparar zonas (2–3)'}
+        </button>
+      )}
 
       {/* ── Layer cards ────────────────────────────── */}
       <div className="flex flex-col gap-1.5">

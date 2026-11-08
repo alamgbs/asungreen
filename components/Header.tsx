@@ -104,6 +104,13 @@ export default function Header({ onOpenMethodology }: { onOpenMethodology: () =>
         >
           REPORTES
         </Link>
+        <Link
+          href="/historias"
+          className="pill-btn inline-flex items-center"
+          style={{ color: 'var(--neon-cyan)', borderColor: 'var(--neon-cyan)' }}
+        >
+          HISTORIAS
+        </Link>
       </nav>
 
       {/* ── Coordinates ────────────────────────────── */}

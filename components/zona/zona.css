@@ -1,0 +1,41 @@
+/* Panel de zona y modo comparar. Escritorio: columna junto al sidebar. Móvil (<768px): hoja inferior plegable. */
+.zona-panel {
+  position: absolute;
+  left: 320px;
+  top: 56px;
+  /* El TimeSlider ocupa la franja inferior (left 320px, ~200px de alto): se deja libre. */
+  max-height: calc(100vh - 56px - 230px);
+  min-height: 160px;
+  width: min(460px, calc(100vw - 340px - 64px));
+  z-index: 39;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border: 1px solid var(--neon-cyan);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.15);
+}
+.zona-panel--ancho { width: min(720px, calc(100vw - 340px - 64px)); }
+.zona-head { padding: 10px 12px; border-bottom: 1px solid var(--bg-border); flex-shrink: 0; }
+.zona-body { overflow-y: auto; overscroll-behavior: contain; padding: 10px 12px 14px; flex: 1; min-height: 0; }
+.zona-panel[data-open='false'] .zona-body { display: none; }
+.zona-panel[data-open='false'] { min-height: 0; }
+.zona-sec { margin-bottom: 18px; }
+.zona-sec > h3 {
+  margin: 0 0 8px; font-family: var(--font-pixel); font-size: 9px; letter-spacing: 0.04em;
+  color: var(--neon-green); text-shadow: var(--glow-green); font-weight: 400; line-height: 1.6;
+}
+.zona-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.zona-select {
+  min-height: 36px; background: var(--bg-base); color: var(--text-bright); border: 1px solid var(--bg-border);
+  font-family: var(--font-mono); font-size: 13px; padding: 0 8px; max-width: 100%;
+}
+.zona-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+
+@media (max-width: 767px) {
+  /* Plegado: barra sobre el TimeSlider. Desplegado: hoja casi a pantalla completa sobre el mapa. */
+  .zona-panel, .zona-panel--ancho {
+    left: 0; right: 0; width: 100%; top: 56px; bottom: 72px; max-height: none; z-index: 46;
+  }
+  .zona-panel[data-open='false'] { top: auto; bottom: 128px; z-index: 39; }
+  .zona-kpis { grid-template-columns: 1fr; }
+}

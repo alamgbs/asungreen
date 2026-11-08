@@ -10,7 +10,16 @@
  */
 import type { LayerType } from './types';
 
-export type IndicadorId = 'ndvi' | 'lst' | 'temp-aire' | 'precipitacion' | 'dias-35c';
+export type IndicadorId =
+  | 'ndvi' | 'lst'
+  | 'temp-aire' | 'temp-max-aire' | 'anomalia-temp-aire' | 'precipitacion' | 'dias-35c'
+  | 'ndvi-modis' | 'lst-modis';
+
+/** Agrupa los indicadores en el selector del panel de zona. */
+export type GrupoIndicador = 'clima' | 'vegetacion' | 'superficie';
+
+/** Cambio de sensor/fuente dentro de la serie: se marca en el eje del gráfico. */
+export interface CambioSensor { t: string; etiqueta: string }
 
 export interface IndicadorDef {
   id: IndicadorId;
@@ -37,12 +46,19 @@ export interface IndicadorDef {
   mejorEs: 'alto' | 'bajo' | 'neutro';
   limitaciones: string[];
   /** 'gee' = Earth Engine (necesita GEE_SA_JSON); 'openmeteo' = API abierta sin clave; 'derivado'. */
-  calculo: 'gee' | 'openmeteo' | 'derivado';
+  calculo: 'gee' | 'openmeteo' | 'modis' | 'derivado';
   dependeDe?: IndicadorId[];
   /** true si el pipeline puede producirlo hoy sin credenciales de GEE. */
   ejecutableSinGee: boolean;
   /** 'activo' = ya está en la app; 'pipeline' = el pipeline lo calcula, aún sin capa en el mapa. */
   estado: 'activo' | 'pipeline' | 'planificado';
+  grupo?: GrupoIndicador;
+  /** Decimales para mostrar valores. */
+  decimales?: number;
+  /** 'anomalia': la escala es divergente alrededor de 0 (se dibuja la línea base en 0). */
+  tipo?: 'valor' | 'anomalia';
+  /** Marcas de cambio de sensor (AAAA-MM) verificadas en el catálogo de GEE. */
+  cambiosSensor?: CambioSensor[];
   /** Id de capa de mapa (LayerType) cuando existe. */
   capa?: LayerType;
 }
@@ -79,6 +95,9 @@ export const INDICADORES: Record<IndicadorId, IndicadorDef> = {
     ejecutableSinGee: false,
     estado: 'activo',
     capa: 'ndvi',
+    grupo: 'vegetacion',
+    decimales: 2,
+    cambiosSensor: [{ t: '2017-03', etiqueta: 'Desde aquí Sentinel-2 (antes, solo Landsat)' }],
   },
 
   lst: {
@@ -114,6 +133,9 @@ export const INDICADORES: Record<IndicadorId, IndicadorDef> = {
     ejecutableSinGee: false,
     estado: 'activo',
     capa: 'soilTemp', // id interno histórico de la capa
+    grupo: 'superficie',
+    decimales: 1,
+    cambiosSensor: [{ t: '2021-10', etiqueta: 'Se suma Landsat 9' }],
   },
 
   'temp-aire': {
@@ -142,6 +164,8 @@ export const INDICADORES: Record<IndicadorId, IndicadorDef> = {
     calculo: 'openmeteo',
     ejecutableSinGee: true,
     estado: 'pipeline',
+    grupo: 'clima',
+    decimales: 1,
   },
 
   precipitacion: {
@@ -169,6 +193,8 @@ export const INDICADORES: Record<IndicadorId, IndicadorDef> = {
     calculo: 'openmeteo',
     ejecutableSinGee: true,
     estado: 'pipeline',
+    grupo: 'clima',
+    decimales: 0,
   },
 
   'dias-35c': {
@@ -197,10 +223,140 @@ export const INDICADORES: Record<IndicadorId, IndicadorDef> = {
     calculo: 'openmeteo',
     ejecutableSinGee: true,
     estado: 'pipeline',
+    grupo: 'clima',
+    decimales: 0,
+  },
+
+  'temp-max-aire': {
+    id: 'temp-max-aire',
+    nombre: 'Temperatura máxima del aire (ERA5)',
+    descripcion: 'Media mensual de la temperatura máxima diaria del aire a 2 m (reanálisis ERA5). Valor de malla, no una estación.',
+    unidad: '°C',
+    fuente: {
+      dataset: 'ERA5 vía Open-Meteo Historical Weather API',
+      coleccion: 'temperature_2m_max (models=era5)',
+      url: 'https://open-meteo.com/en/docs/historical-weather-api',
+      escalaM: 25000,
+    },
+    resolucion: 'Malla de 0,25° (~25 km); las zonas pequeñas comparten celda',
+    licencia: 'Open-Meteo: CC BY 4.0 con atribución; API gratuita solo para uso no comercial. Datos ERA5 © Copernicus/ECMWF',
+    cobertura: { desde: '1940-01', granularidad: ['mensual', 'anual'] },
+    agregacion: 'media',
+    paleta: ['001aff', '00e5ff', 'ffe600', 'ff7c00', 'ff2d78'],
+    rango: [14, 42],
+    mejorEs: 'bajo',
+    limitaciones: [
+      'Resolución gruesa (~25 km): no distingue barrios y subestima extremos urbanos.',
+      'Es reanálisis (modelo + observaciones), no una medición de estación.',
+      'Un mes con menos del 90 % de sus días queda sin dato (el mes en curso siempre).',
+    ],
+    calculo: 'openmeteo',
+    ejecutableSinGee: true,
+    estado: 'pipeline',
+    grupo: 'clima',
+    decimales: 1,
+  },
+
+  'anomalia-temp-aire': {
+    id: 'anomalia-temp-aire',
+    nombre: 'Anomalía de temperatura del aire (ERA5)',
+    descripcion: 'Diferencia entre la temperatura media del mes y la media del mismo mes en 1991–2020 (anual: contra la media anual de 1991–2020).',
+    unidad: '°C',
+    fuente: {
+      dataset: 'ERA5 vía Open-Meteo Historical Weather API',
+      coleccion: 'temperature_2m_mean (models=era5), línea base 1991–2020',
+      url: 'https://open-meteo.com/en/docs/historical-weather-api',
+      escalaM: 25000,
+    },
+    resolucion: 'Malla de 0,25° (~25 km)',
+    licencia: 'Open-Meteo: CC BY 4.0 con atribución; API gratuita solo para uso no comercial. Datos ERA5 © Copernicus/ECMWF',
+    cobertura: { desde: '1991-01', granularidad: ['mensual', 'anual'] },
+    agregacion: 'media',
+    paleta: ['2166ac', 'f7f7f7', 'b2182b'],
+    rango: [-5, 5],
+    mejorEs: 'bajo',
+    limitaciones: [
+      'La línea base es 1991–2020: es una referencia reciente, no el clima preindustrial.',
+      'Con base 1991–2020 los años recientes tienden a salir positivos por la tendencia de largo plazo.',
+      'Resolución de ~25 km.',
+    ],
+    calculo: 'openmeteo',
+    ejecutableSinGee: true,
+    estado: 'pipeline',
+    grupo: 'clima',
+    decimales: 2,
+    tipo: 'anomalia',
+  },
+
+  'ndvi-modis': {
+    id: 'ndvi-modis',
+    nombre: 'Vegetación (NDVI MODIS)',
+    descripcion: 'NDVI de MODIS (compuestos de 16 días) en una muestra de unos 2 km alrededor del centroide de la zona. No es el promedio de la zona.',
+    unidad: 'índice (−1 a 1)',
+    fuente: {
+      dataset: 'MODIS MOD13Q1 v6.1 (NDVI, 250 m, compuestos de 16 días) vía ORNL DAAC MODIS Web Service',
+      coleccion: 'MOD13Q1 · 250m_16_days_NDVI',
+      url: 'https://modis.ornl.gov/data/modis_webservice.html',
+      escalaM: 250,
+    },
+    resolucion: '250 m; media de los píxeles en ~2 km alrededor del centroide',
+    licencia: 'Datos NASA LP DAAC (libres). Servicio ORNL DAAC MODIS Web Service',
+    cobertura: { desde: '2000-02', granularidad: ['mensual', 'anual'] },
+    agregacion: 'media',
+    paleta: ['ff2d78', 'ffe600', '00ff88', '00a855', '004d22'],
+    rango: [0, 1],
+    mejorEs: 'alto',
+    limitaciones: [
+      'Es una muestra del entorno del centroide, no el promedio de la zona.',
+      'Sensor distinto de Sentinel-2/Landsat: no se mezcla con el indicador NDVI de 10 m.',
+      'El mes de un compuesto es el de su fecha de inicio.',
+      'Sin banda de calidad en este pipeline: se confía en el algoritmo de compuesto.',
+    ],
+    calculo: 'modis',
+    ejecutableSinGee: true,
+    estado: 'pipeline',
+    grupo: 'vegetacion',
+    decimales: 2,
+  },
+
+  'lst-modis': {
+    id: 'lst-modis',
+    nombre: 'Temp. superficial (LST MODIS)',
+    descripcion: 'Temperatura de la superficie diurna de MODIS (~10:30 locales) en una muestra de 3×3 píxeles alrededor del centroide. No es la temperatura del aire.',
+    unidad: '°C',
+    fuente: {
+      dataset: 'MODIS MOD11A2 v6.1 (LST diurna, 1 km, compuestos de 8 días) vía ORNL DAAC MODIS Web Service',
+      coleccion: 'MOD11A2 · LST_Day_1km',
+      url: 'https://modis.ornl.gov/data/modis_webservice.html',
+      escalaM: 1000,
+    },
+    resolucion: '1 km; media de 3×3 píxeles alrededor del centroide',
+    licencia: 'Datos NASA LP DAAC (libres). Servicio ORNL DAAC MODIS Web Service',
+    cobertura: { desde: '2000-02', granularidad: ['mensual', 'anual'] },
+    agregacion: 'media',
+    paleta: ['001aff', '00e5ff', 'ffe600', 'ff7c00', 'ff2d78'],
+    rango: [10, 45],
+    mejorEs: 'bajo',
+    limitaciones: [
+      'Mide la superficie (incluye techos y asfalto), no el aire.',
+      'Solo píxeles despejados: los nublados se descartan y pueden dejar meses sin dato.',
+      'Es una muestra del centroide, no el promedio de la zona; 1 km no ve diferencias entre barrios.',
+      'Sensor distinto de Landsat: no se mezcla con el indicador LST de 30 m.',
+    ],
+    calculo: 'modis',
+    ejecutableSinGee: true,
+    estado: 'pipeline',
+    grupo: 'superficie',
+    decimales: 1,
   },
 };
-
 export const INDICADOR_IDS = Object.keys(INDICADORES) as IndicadorId[];
+
+export const esIndicadorId = (x: string): x is IndicadorId => x in INDICADORES;
+
+export const GRUPO_LABEL: Record<GrupoIndicador, string> = {
+  clima: 'Clima (ERA5)', vegetacion: 'Vegetación', superficie: 'Superficie',
+};
 
 /** Indicador asociado a un id de capa del mapa ('soilTemp' → 'lst'). */
 export function indicadorDeCapa(capa: LayerType): IndicadorDef | undefined {

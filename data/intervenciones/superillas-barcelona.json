@@ -1,0 +1,51 @@
+{
+  "id": "superillas-barcelona",
+  "nombre": "Superillas de Barcelona (Poblenou y Sant Antoni)",
+  "tipo": "positiva",
+  "resumen": "Barcelona ensayó superillas (manzanas con tráfico restringido) en Poblenou, Horta y Sant Antoni. Es un caso para mostrar que algunas intervenciones no se ven con los datos satelitales que tiene la app.",
+  "pais": "ES",
+  "zonasTratadas": ["ciudad-barcelona"],
+  "centro": { "lat": 41.4013578, "lng": 2.1951849, "fuente": "OpenStreetMap Nominatim, way 952308686 (búsqueda 'Superilla Poblenou Barcelona'), consultado el 2026-11-08" },
+  "geometria": null,
+  "inicio": "2016",
+  "fechaConfianza": "baja",
+  "fechaNota": "La web oficial de Superilles confirma que Poblenou, Horta y Sant Antoni fueron iniciativas de pequeña escala, pero no da fechas. Otra búsqueda sugería el 5-09-2016 para Poblenou y 2018 para Sant Antoni; esas fechas no se pudieron confirmar abriendo la fuente.",
+  "fuentes": [
+    {
+      "titulo": "Welcome to Superilles",
+      "url": "https://ajuntament.barcelona.cat/superilles/en/",
+      "publicador": "Ajuntament de Barcelona",
+      "tipo": "oficial",
+      "fechaConsulta": "2026-11-08",
+      "respalda": ["ubicacion"],
+      "extracto": "\"Following small-scale initiatives carried out in areas such as Poblenou, Horta and Sant Antoni, Superblocks are now taking a leap in scale and pace, with the creation of a network of green hubs and squares where pedestrians have priority.\""
+    }
+  ],
+  "indicadores": [
+    { "id": "temp-aire", "direccionEsperada": "indefinida", "adecuacionSensor": "mala", "nota": "ERA5 tiene celdas de 0,25° (~25 km): una superilla ocupa unos pocos cientos de metros." },
+    { "id": "lst", "direccionEsperada": "baja", "adecuacionSensor": "mala", "nota": "Los cambios de calzada a espacio peatonal son de pocos metros." }
+  ],
+  "ventanaAntes": { "inicio": "2013-01", "fin": "2015-12" },
+  "ventanaExcluida": { "inicio": "2016-01", "fin": "2018-12" },
+  "ventanaDespues": { "inicio": "2019-01", "fin": "2024-12" },
+  "estacionalidad": "mismo-mes",
+  "control": {
+    "tipo": "ninguno",
+    "criterio": "No hay control definido ni datos de resolución suficiente. La medida relevante (calidad del aire, ruido) viene de sensores en tierra, que la app no tiene.",
+    "pretendenciaParalela": "no-aplica"
+  },
+  "advertencias": [
+    "BORRADOR: fechas sin confirmar. Las ventanas son una propuesta, no un dato verificado.",
+    "Ninguna serie de la app (ERA5, MODIS) puede mostrar el efecto de una superilla; no se calcula contraste.",
+    "Una búsqueda encontró informes que citan reducciones de NO₂ y PM10; no se pudo leer el documento original (PDF) y no se reproducen cifras.",
+    "Esta historia sirve para explicar los límites del método más que para mostrar un resultado."
+  ],
+  "estado": "borrador",
+  "verificacion": {
+    "verificadoEl": "2026-11-08",
+    "notas": [
+      "Se leyó la página oficial de Superilles: confirma las iniciativas en Poblenou, Horta y Sant Antoni, sin fechas.",
+      "El PDF de evaluación de la Agència de Salut Pública (ASPB) se descargó pero no se pudo extraer su texto; no se citan sus cifras."
+    ]
+  }
+}

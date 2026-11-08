@@ -1,0 +1,65 @@
+{
+  "id": "cheonggyecheon-seul",
+  "nombre": "Restauración del arroyo Cheonggyecheon (Seúl)",
+  "tipo": "positiva",
+  "resumen": "Entre 2003 y 2005 Seúl retiró una autopista elevada y reabrió el arroyo Cheonggyecheon, de 10,9 km. Es un caso para leer con cuidado: el cauce es más angosto que un píxel de Landsat.",
+  "pais": "KR",
+  "zonasTratadas": [],
+  "centro": { "lat": 37.5722871, "lng": 127.0367285, "fuente": "OpenStreetMap Nominatim, way 769631455 (un tramo del arroyo; el arroyo completo mide 10,9 km), consultado el 2026-11-08" },
+  "geometria": null,
+  "inicio": "2003",
+  "fin": "2005-09",
+  "fechaConfianza": "media",
+  "fechaNota": "Wikipedia en inglés: la obra empezó en 2003, se completó en 2005 y el arroyo se abrió al público en setiembre de 2005. Otro estudio observacional da setiembre de 2004 para la restauración; no se pudo resolver la discrepancia con una fuente municipal.",
+  "fuentes": [
+    {
+      "titulo": "Cheonggyecheon (Wikipedia en inglés)",
+      "url": "https://en.wikipedia.org/wiki/Cheonggyecheon",
+      "publicador": "Wikipedia",
+      "tipo": "otra",
+      "fechaConsulta": "2026-11-08",
+      "respalda": ["fecha", "ubicacion"],
+      "extracto": "\"In 2003, the city government began an urban renewal project to remove the expressway and restore the stream, which was completed in 2005\"; \"The stream was opened to the public in September 2005.\" Longitud 10,92 km."
+    },
+    {
+      "titulo": "Changes of the micro-climate and building cooling load due to the green effect of a restored stream in Seoul, Korea",
+      "url": "https://pure.uos.ac.kr/en/publications/changes-of-the-micro-climate-and-building-cooling-load-due-to-the/",
+      "publicador": "University of Seoul (repositorio)",
+      "tipo": "academica",
+      "fechaConsulta": "2026-11-08",
+      "respalda": ["efecto"],
+      "extracto": "Registro de un trabajo de congreso sobre el cambio de microclima y de la carga de enfriamiento de edificios por el arroyo restaurado. No se leyeron las cifras del artículo completo."
+    }
+  ],
+  "indicadores": [
+    { "id": "lst", "direccionEsperada": "baja", "adecuacionSensor": "mala", "nota": "El arroyo y su franja verde miden decenas de metros; un píxel Landsat térmico (30 m, remuestreado de 100 m) lo mezcla con la ciudad." },
+    { "id": "ndvi", "direccionEsperada": "sube", "adecuacionSensor": "limitada" }
+  ],
+  "ventanaAntes": { "inicio": "2000-01", "fin": "2002-12" },
+  "ventanaExcluida": { "inicio": "2003-01", "fin": "2005-12" },
+  "ventanaDespues": { "inicio": "2007-01", "fin": "2012-12" },
+  "estacionalidad": "mismo-mes",
+  "control": {
+    "tipo": "buffer-anillo",
+    "criterio": "Propuesto: anillo de 400 m a 1 km a cada lado del cauce frente a calles paralelas del mismo barrio; sin definir ni calcular. La app no tiene Seúl entre sus zonas.",
+    "pretendenciaParalela": "no-aplica"
+  },
+  "efectoAfirmadoPorFuente": {
+    "texto": "Según el trabajo de la University of Seoul (registro del repositorio), el arroyo restaurado modificó el microclima y la carga de enfriamiento de los edificios cercanos; las cifras exactas no se leyeron.",
+    "fuenteIdx": 1
+  },
+  "advertencias": [
+    "BORRADOR: sin zona en la app ni series; no se calcula nada.",
+    "Un píxel de satélite no puede confirmar un efecto de decenas de metros: esta historia sirve para mostrar el límite del método.",
+    "Búsquedas anteriores encontraron cifras de descenso de temperatura muy distintas (de décimas de grado a más de 3 °C) sin que se pudieran rastrear a un estudio; no se citan aquí.",
+    "La fecha de reapertura se apoya en una fuente secundaria; falta el registro de la municipalidad de Seúl."
+  ],
+  "estado": "borrador",
+  "verificacion": {
+    "verificadoEl": "2026-11-08",
+    "notas": [
+      "Wikipedia en inglés leída: inicio 2003, apertura setiembre de 2005, 10,92 km.",
+      "El registro de la University of Seoul se abrió pero no se leyó el PDF: solo se confirma que el estudio existe."
+    ]
+  }
+}

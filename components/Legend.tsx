@@ -3,10 +3,13 @@
 import { useState } from 'react';
 import type { LayerType } from '@/lib/types';
 import { LAYER_INFO, SIM_BADGE } from '@/lib/layerInfo';
+import { indicadorDeCapa } from '@/lib/indicadores';
+import { formatear } from '@/lib/comparar';
 
 interface LegendProps {
   activeLayers: Record<LayerType, boolean>;
-  geeStats:     Partial<Record<'ndvi' | 'soilTemp', { min: number; max: number }>>;
+  /** @deprecated Ya no se usa: la escala es el rango fijo de lib/indicadores.ts (sin value:compute). */
+  geeStats?:    Partial<Record<'ndvi' | 'soilTemp', { min: number; max: number }>>;
 }
 
 const LEGENDS: Record<
@@ -42,7 +45,22 @@ const LEGENDS: Record<
   },
 };
 
-export default function Legend({ activeLayers, geeStats }: LegendProps) {
+/** Gradiente y rótulos desde el registro: la escala es FIJA e igual para todas las zonas y años. */
+function escalaFija(layerId: LayerType) {
+  const def = indicadorDeCapa(layerId);
+  if (!def) return null;
+  const [lo, hi] = def.rango;
+  const dec = def.decimales ?? 1;
+  const u = def.id === 'lst' ? '°C' : '';
+  return {
+    gradient: `linear-gradient(to right, ${def.paleta.map((c) => `#${c}`).join(', ')})`,
+    min: `${formatear(lo, dec)}${u}`,
+    mid: `${formatear((lo + hi) / 2, dec)}${u}`,
+    max: `${formatear(hi, dec)}${u}`,
+  };
+}
+
+export default function Legend({ activeLayers }: LegendProps) {
   const [open, setOpen] = useState(false); // solo móvil: plegada para no tapar el mapa
   const visible = (Object.keys(activeLayers) as LayerType[]).filter((k) => activeLayers[k]);
 
@@ -62,6 +80,7 @@ export default function Legend({ activeLayers, geeStats }: LegendProps) {
       <div className="legend-panels flex flex-col gap-2">
       {visible.map((layerId) => {
         const leg = LEGENDS[layerId];
+        const fija = escalaFija(layerId);
         return (
           <div
             key={layerId}
@@ -104,38 +123,27 @@ export default function Legend({ activeLayers, geeStats }: LegendProps) {
             <div
               style={{
                 height: '6px',
-                background: leg.gradient,
+                background: fija?.gradient ?? leg.gradient,
                 borderRadius: '1px',
                 boxShadow: `0 0 8px ${leg.glowColor}44`,
                 marginBottom: '5px',
               }}
             />
 
-            {/* Min/Max — dynamic when AOI active, hardcoded otherwise */}
-            {(() => {
-              const stats = layerId !== 'traffic' ? geeStats[layerId as 'ndvi' | 'soilTemp'] : undefined;
-              const isLst = layerId === 'soilTemp';
-              const minLabel = stats
-                ? (isLst ? `${stats.min.toFixed(1)}°C` : stats.min.toFixed(2))
-                : leg.min;
-              const maxLabel = stats
-                ? (isLst ? `${stats.max.toFixed(1)}°C` : stats.max.toFixed(2))
-                : leg.max;
-              return (
-                <div
-                  className="flex justify-between"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '12px',
-                    color: 'var(--text-muted)',
-                  }}
-                >
-                  <span>{minLabel}</span>
-                  <span>{maxLabel}</span>
-                </div>
-              );
-            })()}
-
+            {/* Escala fija del registro: mismos valores en todas las zonas */}
+            <div
+              className="flex justify-between"
+              style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-muted)' }}
+            >
+              <span>{fija?.min ?? leg.min}</span>
+              {fija && <span>{fija.mid}</span>}
+              <span>{fija?.max ?? leg.max}</span>
+            </div>
+            {fija && (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Escala fija: igual en todas las zonas y años.
+              </div>
+            )}
 
             {/* Source */}
             <div

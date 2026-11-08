@@ -1,0 +1,66 @@
+{
+  "id": "medellin-corredores-verdes",
+  "nombre": "Corredores Verdes de Medellín (2016-2019)",
+  "tipo": "positiva",
+  "resumen": "En el cuatrienio 2016-2019 Medellín plantó corredores verdes en 18 ejes viales y 12 vías fluviales. La Alcaldía habla de hasta 2 °C menos; esa cifra es declaración, no una medición hecha aquí.",
+  "pais": "CO",
+  "zonasTratadas": [],
+  "centro": { "lat": 6.2697324, "lng": -75.6025597, "fuente": "OpenStreetMap Nominatim, relación 1343264 (Medellín), consultado el 2026-11-08" },
+  "geometria": null,
+  "inicio": "2016",
+  "fin": "2019",
+  "fechaConfianza": "media",
+  "fechaNota": "La fuente municipal da el cuatrienio 2016-2019, no la fecha de cada corredor; no se encontró el calendario por corredor.",
+  "fuentes": [
+    {
+      "titulo": "Con más corredores verdes, Medellín enfrenta el calentamiento global y baja su temperatura",
+      "url": "https://www.medellin.gov.co/es/sala-de-prensa/noticias/con-mas-corredores-verdes-medellin-enfrenta-el-calentamiento-global-y-baja-su-temperatura/",
+      "publicador": "Alcaldía de Medellín",
+      "tipo": "oficial",
+      "fechaPublicacion": "2024-06-27",
+      "fechaConsulta": "2026-11-08",
+      "respalda": ["fecha", "ubicacion", "efecto"],
+      "extracto": "\"En Medellín, los primeros corredores verdes urbanos se construyeron en el cuatrienio 2016 – 2019. Un total de 18 están en ejes viales (San Juan, la 33, El Poblado, Oriental, Juan del Corral, Los Huesos, entre otras), además, 12 están vinculados a fuentes hídricas.\" Cita de la Secretaría: \"Contribuimos a la percepción de disminución en la temperatura hasta en 2 grados centígrados.\""
+    },
+    {
+      "titulo": "Medellín se refresca con intervenciones urbanas basadas en la naturaleza",
+      "url": "https://www.unep.org/es/noticias-y-reportajes/reportajes/medellin-se-refresca-con-intervenciones-urbanas-basadas-en-la",
+      "publicador": "PNUMA (ONU Medio Ambiente)",
+      "tipo": "oficial",
+      "fechaConsulta": "2026-11-08",
+      "respalda": ["efecto"],
+      "extracto": "El alcalde Federico Gutiérrez: \"Con esta intervención, hemos logrado reducir la temperatura en más de 2°C y los ciudadanos ya lo notan.\" Habla de 18 calles y 12 vías fluviales transformadas."
+    }
+  ],
+  "indicadores": [
+    { "id": "lst", "direccionEsperada": "baja", "adecuacionSensor": "mala", "nota": "Corredores de pocos metros de ancho; la temperatura de superficie satelital no los resuelve." },
+    { "id": "ndvi", "direccionEsperada": "sube", "adecuacionSensor": "limitada", "nota": "Sentinel-2 (10 m) podría ver los ejes más anchos; trópico muy nuboso." }
+  ],
+  "ventanaAntes": { "inicio": "2013-01", "fin": "2015-12" },
+  "ventanaExcluida": { "inicio": "2016-01", "fin": "2019-12" },
+  "ventanaDespues": { "inicio": "2020-01", "fin": "2024-12" },
+  "estacionalidad": "mismo-mes",
+  "control": {
+    "tipo": "buffer-anillo",
+    "criterio": "Propuesto: manzanas a 300-800 m de cada corredor sin plantación frente a manzanas contiguas al corredor. Falta la geometría de los corredores; sin calcular.",
+    "pretendenciaParalela": "no-aplica"
+  },
+  "efectoAfirmadoPorFuente": {
+    "texto": "Según la Alcaldía de Medellín, los corredores contribuyen a una 'percepción de disminución' de hasta 2 °C; según el alcalde citado por el PNUMA, 'más de 2 °C'. Ambas son declaraciones, no un estudio.",
+    "fuenteIdx": 0
+  },
+  "advertencias": [
+    "BORRADOR: sin zona en la app y sin series; no se calcula nada.",
+    "Las dos fuentes no dicen lo mismo ('percepción… hasta 2 °C' frente a 'más de 2 °C'); ninguna explica el método de medición.",
+    "El satélite no mide la temperatura del aire que siente una persona en la calle, y los corredores son más angostos que un píxel térmico.",
+    "Faltan las fechas de cada corredor: el cuatrienio es solo un rango."
+  ],
+  "estado": "borrador",
+  "verificacion": {
+    "verificadoEl": "2026-11-08",
+    "notas": [
+      "Páginas de la Alcaldía y del PNUMA abiertas y leídas; confirman el cuatrienio, las cifras 18 + 12 y las dos declaraciones sobre temperatura.",
+      "No se halló informe técnico con el método de medición ni fechas por corredor: por eso queda en borrador."
+    ]
+  }
+}

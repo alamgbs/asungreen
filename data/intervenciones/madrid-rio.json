@@ -1,0 +1,85 @@
+{
+  "id": "madrid-rio",
+  "nombre": "Madrid Río (soterramiento de la M-30 y parque)",
+  "tipo": "positiva",
+  "resumen": "Tras soterrar el tramo oeste de la M-30, el Manzanares pasó a tener un parque de ribera de 121 hectáreas, inaugurado en 2011. Sirve de ejemplo de una intervención lineal que un píxel de 250 m apenas distingue.",
+  "pais": "ES",
+  "zonasTratadas": [
+    "ciudad-madrid"
+  ],
+  "centro": {
+    "lat": 40.4005966,
+    "lng": -3.7207547,
+    "fuente": "OpenStreetMap Nominatim, way 171007753 (Madrid Río), consultado el 2026-11-08"
+  },
+  "geometria": null,
+  "inicio": "2011",
+  "fechaConfianza": "media",
+  "fechaNota": "Solo se confirmó el año de inauguración (2011) en la ficha de Wikipedia en español; el mes y el día no. El soterramiento de la M-30 se ubica en 2003-2007 en otra búsqueda que no se pudo abrir (el sitio del Ayuntamiento devolvió HTTP 403).",
+  "fuentes": [
+    {
+      "titulo": "Madrid Río (Wikipedia en español)",
+      "url": "https://es.wikipedia.org/wiki/Madrid_R%C3%ADo",
+      "publicador": "Wikipedia",
+      "tipo": "otra",
+      "fechaConsulta": "2026-11-08",
+      "respalda": [
+        "fecha",
+        "ubicacion"
+      ],
+      "extracto": "Ficha: inauguración 2011, área 121 ha. El soterramiento del arco oeste de la M-30 liberó más de cincuenta hectáreas de ribera ocupadas desde los años setenta por las calzadas."
+    }
+  ],
+  "indicadores": [
+    {
+      "id": "ndvi",
+      "direccionEsperada": "sube",
+      "adecuacionSensor": "limitada",
+      "nota": "Corredor de pocas decenas de metros de ancho: mejor con Sentinel-2 (10 m) que con MODIS."
+    },
+    {
+      "id": "lst",
+      "direccionEsperada": "baja",
+      "adecuacionSensor": "mala",
+      "nota": "Un píxel térmico de 30 m (Landsat) o de ~1 km (MODIS) mezcla el parque con calles y edificios."
+    }
+  ],
+  "ventanaAntes": {
+    "inicio": "2000-01",
+    "fin": "2002-12"
+  },
+  "ventanaExcluida": {
+    "inicio": "2003-01",
+    "fin": "2011-12"
+  },
+  "ventanaDespues": {
+    "inicio": "2012-01",
+    "fin": "2024-12"
+  },
+  "estacionalidad": "mismo-mes",
+  "control": {
+    "tipo": "ninguno",
+    "criterio": "Sin definir. Propuesta: anillo de 500 m a 2 km alrededor de la ribera, quitando el parque; falta el polígono con fuente.",
+    "pretendenciaParalela": "no-aplica"
+  },
+  "advertencias": [
+    "BORRADOR: las ventanas son una propuesta (antes de las obras de 2003, después de la apertura de 2011) y las fechas de obra no están confirmadas con fuente oficial.",
+    "La app no tiene series para Madrid todavía.",
+    "Fecha basada en una fuente secundaria; falta la fuente oficial del Ayuntamiento.",
+    "Solo se confirmó la superficie y el año; no se verificó ningún efecto medido en temperatura o vegetación."
+  ],
+  "estado": "borrador",
+  "verificacion": {
+    "verificadoEl": "2026-11-08",
+    "notas": [
+      "Se abrió la ficha de Wikipedia en español (año 2011, 121 ha). diario.madrid.es respondió 403 al acceso automático, así que no se pudo leer la fuente municipal.",
+      "No se confirmó el día de inauguración ni las fechas de obra del soterramiento."
+    ]
+  },
+  "mapa": {
+    "capa": "ndvi",
+    "anios": [
+      2018
+    ]
+  }
+}

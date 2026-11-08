@@ -6,11 +6,14 @@
  */
 import type { LayerType } from './types';
 import { resolverZonaId } from './zonas';
+import { parseComparar, serializarComparar } from './comparar';
 import { INITIAL_VIEW_STATE } from './constants';
 
 export interface MapUrlState {
   /** Id canónico de zona (lib/zonas.ts) o null = global. */
   zona: string | null;
+  /** Modo comparar: null = cerrado; lista (0–3 ids de zona) = abierto. URL: ?comparar=a,b,c */
+  comparar: string[] | null;
   layers: Record<LayerType, boolean>;
   years: number[];
   seasons: string[];
@@ -41,6 +44,7 @@ export function currentSeason(): string {
 export function defaultMapState(): MapUrlState {
   return {
     zona: null,
+    comparar: null,
     layers: { ...DEFAULT_LAYERS },
     years: [new Date().getFullYear()],
     seasons: [currentSeason()],
@@ -73,6 +77,9 @@ export function parseMapState(p: Params): MapUrlState {
   const s = defaultMapState();
 
   s.zona = resolverZonaId(get(p, 'zona')) ?? resolverZonaId(get(p, 'aoi'));
+
+  const cmp = get(p, 'comparar');
+  if (cmp !== undefined) s.comparar = parseComparar(cmp);
 
   const layers = get(p, 'layers');
   if (layers !== undefined) {
@@ -115,6 +122,7 @@ export function serializeMapState(st: Omit<MapUrlState, 'hasView'>, includeView:
   const d = defaultMapState();
   const q = new URLSearchParams();
   if (st.zona) q.set('zona', st.zona);
+  if (st.comparar) q.set('comparar', serializarComparar(st.comparar));
   if (LAYER_IDS.some((l) => st.layers[l] !== d.layers[l])) {
     q.set('layers', LAYER_IDS.filter((l) => st.layers[l]).join(','));
   }

@@ -72,6 +72,18 @@ export function anualDesdeMensual(mensual, { agregacion, decimales, minMeses = 1
 }
 
 // ── E/S ────────────────────────────────────────────────────────────────
+/** Archivos de zona = {id}.json; se excluyen el manifest y los auxiliares (indicadores-*.json, meta-*.json). */
+export const esArchivoZona = (f) => f.endsWith('.json') && f !== 'manifest.json' && !f.startsWith('indicadores-') && !f.startsWith('meta-');
+
+/** Escribe/actualiza un indicador de una zona (lectura y escritura síncronas: seguras frente a otro proceso del pipeline). */
+export function guardarIndicador(zonaId, indId, { mensual, anual }) {
+  const z = leerZona(zonaId) ?? nuevaZona(zonaId);
+  const ind = (z.indicadores[indId] ??= {});
+  if (mensual !== undefined) ind.mensual = mensual;
+  if (anual !== undefined) ind.anual = anual;
+  escribirZona(z);
+}
+
 const archivo = (id) => join(SERIES_DIR, `${id}.json`);
 
 export function leerZona(id) {
@@ -115,7 +127,7 @@ function percentil(arr, p) {
 
 /** Reconstruye manifest.json a partir de lo que hay en data/series. */
 export function construirManifest({ zonasEsperadas = [], origenZonas = '', pendientes = {} } = {}) {
-  const files = readdirSync(SERIES_DIR).filter((f) => f.endsWith('.json') && f !== 'manifest.json').sort();
+  const files = readdirSync(SERIES_DIR).filter(esArchivoZona).sort();
   const hash = createHash('sha256');
   const zonas = {};
   const inds = {};

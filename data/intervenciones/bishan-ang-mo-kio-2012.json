@@ -1,0 +1,62 @@
+{
+  "id": "bishan-ang-mo-kio-2012",
+  "nombre": "Parque Bishan–Ang Mo Kio y río Kallang (ABC Waters, Singapur)",
+  "tipo": "positiva",
+  "resumen": "El 17 de marzo de 2012 se inauguró el parque rediseñado, que convierte un canal de concreto del río Kallang en un cauce con riberas naturalizadas. Es una historia con fecha oficial y área suficiente para un píxel.",
+  "pais": "SG",
+  "zonasTratadas": [],
+  "centro": { "lat": 1.3652468, "lng": 103.836372, "fuente": "OpenStreetMap Nominatim, way 37408875 (Bishan-Ang Mo Kio Park), consultado el 2026-11-08" },
+  "geometria": null,
+  "inicio": "2009",
+  "fin": "2012-03-17",
+  "fechaConfianza": "alta",
+  "fechaNota": "Apertura oficial: 17-03-2012 (discurso del primer ministro). Obras 2009-2012 según Wikipedia en inglés (secundaria).",
+  "fuentes": [
+    {
+      "titulo": "PM Lee Hsien Loong at the Opening of Bishan Park – ABC Waters",
+      "url": "https://www.pmo.gov.sg/newsroom/speech-prime-minister-lee-hsien-loong-opening-bishan-park-abc-waters-17-mar-2012/",
+      "publicador": "Prime Minister's Office, Singapur",
+      "tipo": "oficial",
+      "fechaPublicacion": "2012-03-17",
+      "fechaConsulta": "2026-11-08",
+      "respalda": ["fecha", "ubicacion"],
+      "extracto": "\"Speech by Prime Minister Lee Hsien Loong at the opening of Bishan Park – ABC Waters on 17 March 2012.\" Menciona el parque Bishan-Ang Mo Kio y al grupo de voluntarios Friends of Kallang River@Bishan Park."
+    },
+    {
+      "titulo": "Bishan–Ang Mo Kio Park (Wikipedia en inglés)",
+      "url": "https://en.wikipedia.org/wiki/Bishan%E2%80%93Ang_Mo_Kio_Park",
+      "publicador": "Wikipedia",
+      "tipo": "otra",
+      "fechaConsulta": "2026-11-08",
+      "respalda": ["fecha"],
+      "extracto": "Diseño 2007-2010, construcción 2009-2012, costo S$76 millones; apertura oficial el 17-03-2012."
+    }
+  ],
+  "indicadores": [
+    { "id": "ndvi", "direccionEsperada": "indefinida", "adecuacionSensor": "limitada", "nota": "El parque ya era un parque antes (con canal de concreto): el cambio es de forma del cauce y vegetación ribereña, no de verde nuevo. Trópico muy nuboso." },
+    { "id": "lst", "direccionEsperada": "baja", "adecuacionSensor": "limitada" }
+  ],
+  "ventanaAntes": { "inicio": "2005-01", "fin": "2008-12" },
+  "ventanaExcluida": { "inicio": "2009-01", "fin": "2012-12" },
+  "ventanaDespues": { "inicio": "2014-01", "fin": "2019-12" },
+  "estacionalidad": "mismo-mes",
+  "control": {
+    "tipo": "zona-vecina-similar",
+    "criterio": "Propuesto: otro parque de conjunto habitacional de Singapur sin obra en esos años (p. ej. un parque vecino de Ang Mo Kio); sin elegir ni verificar.",
+    "pretendenciaParalela": "no-aplica"
+  },
+  "advertencias": [
+    "La app aún no tiene series para Singapur ni polígono del parque con fuente: no se calcula contraste.",
+    "El área ya era parque antes de 2009; esperar 'verde nuevo' sería un error.",
+    "No se verificó ninguna cifra de enfriamiento ni de biodiversidad para este caso."
+  ],
+  "estado": "verificada",
+  "verificacion": {
+    "verificadoEl": "2026-11-08",
+    "notas": [
+      "La fecha de apertura (17-03-2012) está en el título y el texto del discurso oficial de la PMO y coincide con Wikipedia.",
+      "Las fechas de obra (2009-2012) salen solo de Wikipedia; son secundarias."
+    ]
+  },
+  "mapa": { "capa": "ndvi", "anios": [2019] }
+}

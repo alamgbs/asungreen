@@ -1,0 +1,84 @@
+{
+  "id": "costanera-sur-asuncion",
+  "nombre": "Costanera Sur de Asunción (refulado y avenida)",
+  "tipo": "mixta",
+  "resumen": "Entre agosto de 2021 y julio de 2024 se rellenaron decenas de hectáreas del Bañado Sur para una avenida y un parque lineal. La prensa señala además pérdida de humedal y reubicaciones, que estas series no miden.",
+  "pais": "PY",
+  "zonasTratadas": ["PY-ASU"],
+  "centro": null,
+  "geometria": null,
+  "inicio": "2021-08",
+  "fin": "2024-07-20",
+  "fechaConfianza": "media",
+  "fechaNota": "Inicio: el MOPC informó el 14-08-2021 que se iniciaron los trabajos de refulado de 62 hectáreas; antes hubo otro relleno para viviendas (nota de IP del 22-09-2017) que no es esta etapa. Fin: ABC Color (21-07-2024) dice 'ayer se inauguró', es decir 20-07-2024; la obra seguía con deudas y entregas pendientes.",
+  "fuentes": [
+    {
+      "titulo": "Iniciaron trabajos de relleno de terreno para la construcción de la Costanera Sur",
+      "url": "https://www.lanacion.com.py/pais/2021/08/14/iniciaron-trabajos-de-relleno-de-terreno-para-la-construccion-de-la-costanera-sur/",
+      "publicador": "La Nación",
+      "tipo": "prensa",
+      "fechaPublicacion": "2021-08-14",
+      "fechaConsulta": "2026-11-08",
+      "respalda": ["fecha", "ubicacion"],
+      "extracto": "El MOPC informó que se iniciaron los trabajos de refulado de 62 hectáreas para la avenida Costanera Sur, que unirá Lambaré con Asunción."
+    },
+    {
+      "titulo": "Colorida inauguración de Costanera Sur, que costará US$ 171 millones",
+      "url": "https://www.abc.com.py/economia/2024/07/21/colorida-inauguracion-de-costanera-sur-que-costara-us-171-millones/",
+      "publicador": "ABC Color",
+      "tipo": "prensa",
+      "fechaPublicacion": "2024-07-21",
+      "fechaConsulta": "2026-11-08",
+      "respalda": ["fecha"],
+      "extracto": "\"Ayer se inauguró la costosa Costanera Sur de Asunción, tres años después de iniciarse los trabajos.\""
+    },
+    {
+      "titulo": "Rellenan la laguna Yrupé como parte de la Costanera Sur, advierten sobre daños",
+      "url": "https://www.abc.com.py/nacionales/2022/05/21/rellenan-la-laguna-yrupe-como-parte-de-la-costanera-sur-advierten-sobre-danos/",
+      "publicador": "ABC Color",
+      "tipo": "prensa",
+      "fechaPublicacion": "2022-05-21",
+      "fechaConsulta": "2026-11-08",
+      "respalda": ["efecto"],
+      "extracto": "\"El refulado de la Costanera Sur también ya está afectando a la Laguna Yrupé del Bañado Tacumbú.\" Vecinos denuncian que desaparecerán especies y mencionan 66 hectáreas a rellenar para viviendas de los afectados."
+    }
+  ],
+  "indicadores": [
+    {
+      "id": "ndvi-modis",
+      "direccionEsperada": "indefinida",
+      "adecuacionSensor": "limitada",
+      "nota": "Un humedal rellenado puede perder agua y ganar suelo desnudo o césped; el NDVI no distingue bien esos cambios y el departamento promedia una zona pequeña."
+    }
+  ],
+  "ventanaAntes": { "inicio": "2016-01", "fin": "2020-12" },
+  "ventanaExcluida": { "inicio": "2021-01", "fin": "2024-12" },
+  "ventanaDespues": { "inicio": "2025-01", "fin": "2026-10" },
+  "estacionalidad": "anual",
+  "control": {
+    "tipo": "zona-vecina-similar",
+    "zonaIds": ["PY-11"],
+    "criterio": "Central es el departamento urbano contiguo del Gran Asunción, con clima y suelo similares. No tiene otra obra comparable conocida, pero esto no se verificó.",
+    "pretendenciaParalela": "no-verificada"
+  },
+  "efectoAfirmadoPorFuente": {
+    "texto": "Según ABC Color (2022), el refulado ya estaba afectando la laguna Yrupé del Bañado Tacumbú.",
+    "fuenteIdx": 2
+  },
+  "advertencias": [
+    "Hay un componente social (familias afectadas, viviendas pendientes) que esta herramienta no mide y que la prensa discute.",
+    "Después de la obra hay menos de 2 años de datos: casi no hay ventana 'después' completa, por lo que no se calcula contraste.",
+    "El departamento Asunción (≈117 km²) promedia una zona muy pequeña de bañado: un cambio local se diluye.",
+    "No se verificó la cifra de hectáreas finales ni el grado de pérdida de humedal con una fuente técnica."
+  ],
+  "estado": "verificada",
+  "verificacion": {
+    "verificadoEl": "2026-11-08",
+    "notas": [
+      "Inicio del refulado de 62 ha (14-08-2021, La Nación) e inauguración (20-07-2024, ABC) leídos en las notas.",
+      "La nota de IP del 22-09-2017 describe otro relleno (11 ha, primeras 800 viviendas); se deja fuera de las fechas de la historia.",
+      "Fuentes de prensa; falta un documento del MOPC con fechas de contrato y recepción."
+    ]
+  },
+  "mapa": { "capa": "ndvi", "anios": [2021] }
+}

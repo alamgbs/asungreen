@@ -35,7 +35,7 @@ const geeRequestId: Partial<Record<'ndvi' | 'soilTemp', number>> = {};
  * Cached: if the same layer+years+seasons+aoiId combo was already fetched
  * this session, returns the cached result without a new API call.
  */
-export async function getGeeTileUrl(
+async function fetchGeeTileUrl(
   layer:   'ndvi' | 'soilTemp',
   years:   number[],
   seasons: string[],
@@ -74,4 +74,25 @@ export async function getGeeTileUrl(
   geeResultCache[layer] = result;
 
   return result;
+}
+
+/** Estado de las peticiones a /api/gee-map; lo lee el timelapse (components/TimeSlider.tsx) para no encadenar peticiones. */
+export const geeStatus = { pending: 0, lastError: null as string | null, lastErrorAt: 0 };
+
+export async function getGeeTileUrl(
+  layer:   'ndvi' | 'soilTemp',
+  years:   number[],
+  seasons: string[],
+  aoiId?:  string,
+): Promise<GeeLayerResult> {
+  geeStatus.pending++;
+  try {
+    return await fetchGeeTileUrl(layer, years, seasons, aoiId);
+  } catch (e) {
+    geeStatus.lastError = e instanceof Error ? e.message : String(e);
+    geeStatus.lastErrorAt = performance.now();
+    throw e;
+  } finally {
+    geeStatus.pending--;
+  }
 }

@@ -5,7 +5,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { SERIES_DIR, parseMes } from './lib/series-io.mjs';
+import { SERIES_DIR, parseMes, esArchivoZona } from './lib/series-io.mjs';
 
 const RANGOS = {
   'temp-aire': [-15, 45], 'temp-max-aire': [-15, 55], 'precipitacion': [0, 2500], 'dias-35c': [0, 31],
@@ -14,7 +14,7 @@ const RANGOS = {
 const manifest = JSON.parse(readFileSync(join(SERIES_DIR, 'manifest.json'), 'utf8'));
 const errs = [];
 const hash = createHash('sha256');
-const files = readdirSync(SERIES_DIR).filter((f) => f.endsWith('.json') && f !== 'manifest.json').sort();
+const files = readdirSync(SERIES_DIR).filter(esArchivoZona).sort();
 for (const f of files) {
   const txt = readFileSync(join(SERIES_DIR, f), 'utf8'); hash.update(f).update(txt);
   const z = JSON.parse(txt);
