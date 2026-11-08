@@ -121,7 +121,12 @@ await procesarAmbito('PY', { pais: 'PY' }, (x, y) => idxPY(x, y), true);
 if (!args['solo-py']) {
   for (const c of ciudades) {
     const idx = indiceZonas([c], 0.1);
-    await procesarAmbito(c.id, { bbox: c.bbox }, (x, y) => idx(x, y), false);
+    try { await procesarAmbito(c.id, { bbox: c.bbox }, (x, y) => idx(x, y), false); }
+    catch (e) { // Overpass caído/saturado: esa ciudad queda sin indicadores OSM (no se escribe nada), el resto sigue
+      console.warn(`[osm] ${c.id} FALLÓ (${e.message.slice(0, 80)}); sin indicadores OSM para esta ciudad`);
+      for (const k of Object.keys(meta.osm)) if (k.startsWith(c.id)) delete meta.osm[k];
+      const a = A(c.id); a.verdeKm2 = 0; a.nVerde = 0; a.n = { salud: 0, escuela: 0, transporte: 0 };
+    }
   }
 }
 

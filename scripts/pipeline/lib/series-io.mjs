@@ -171,7 +171,7 @@ export function construirManifest({ zonasEsperadas = [], origenZonas = '', pendi
   const manifest = {
     formato: FORMATO, pipelineVersion: PIPELINE_VERSION, generado: new Date().toISOString(),
     origenZonas, nZonas: files.length, zonasEsperadas: zonasEsperadas.length || null,
-    completo: zonasEsperadas.length > 0 && faltantes.length === 0 && Object.keys(pendientes).length === 0,
+    completo: zonasEsperadas.length > 0 && faltantes.length === 0 && zonasEsperadas.every((id) => zonas[id]?.includes('temp-aire')) && Object.keys(pendientes).length === 0,
     pendientes, // { "zona/indicador": "motivo" }
     checksum: hash.digest('hex'),
     indicadores, zonas,

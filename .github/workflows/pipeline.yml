@@ -61,6 +61,15 @@ jobs:
           node scripts/pipeline/open/run.mjs --max-espera-hora-min=60 \
             ${{ inputs.forzar && '--forzar' || '' }}
 
+      - name: (A2) Capas sociales abiertas — mensual o manual (OSM/Overpass, FIRMS, RWI, WorldPop)
+        if: steps.decidir.outputs.correr == 'true' && (github.event_name == 'workflow_dispatch' || github.event.schedule == '17 6 8 * *')
+        run: |
+          npm ci
+          node scripts/pipeline/open/rwi.mjs
+          node scripts/pipeline/open/firms.mjs
+          node scripts/pipeline/open/sociales.mjs
+          node scripts/pipeline/manifest.mjs
+
       - name: (B) Pipeline GEE — Sentinel-2 NDVI y Landsat LST
         if: steps.decidir.outputs.correr == 'true' && env.GEE_SA_JSON != '' && !inputs.solo_abierto
         run: |

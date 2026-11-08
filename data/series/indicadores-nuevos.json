@@ -1,0 +1,506 @@
+{
+ "generado": "2026-11-08",
+ "indicadores": [
+  {
+   "id": "temp-max-aire",
+   "nombre": "Temperatura máxima del aire (ERA5)",
+   "unidad": "°C",
+   "fuente": "ERA5 vía Open-Meteo Historical Weather API (models=era5, malla 0,25°)",
+   "url": "https://open-meteo.com/en/docs/historical-weather-api",
+   "resolucion": "25 km (ERA5)",
+   "licencia": "Open-Meteo CC BY 4.0 (API gratuita solo uso no comercial). Datos ERA5 © Copernicus/ECMWF",
+   "agregacion": "media",
+   "mejorEs": "bajo",
+   "rango": [
+    15,
+    42
+   ],
+   "cobertura": {
+    "desde": "1991-01",
+    "granularidad": [
+     "mensual",
+     "anual"
+    ]
+   },
+   "calculo": "openmeteo",
+   "limitaciones": [
+    "Media mensual de la máxima diaria a 2 m."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "anomalia-temp-aire",
+   "nombre": "Anomalía de temperatura vs. 1991–2020",
+   "unidad": "°C",
+   "fuente": "ERA5 vía Open-Meteo Historical Weather API (models=era5, malla 0,25°)",
+   "url": "https://open-meteo.com/en/docs/historical-weather-api",
+   "resolucion": "25 km (ERA5)",
+   "licencia": "Open-Meteo CC BY 4.0 (API gratuita solo uso no comercial). Datos ERA5 © Copernicus/ECMWF",
+   "agregacion": "media",
+   "mejorEs": "bajo",
+   "rango": [
+    -4,
+    4
+   ],
+   "cobertura": {
+    "desde": "1991-01",
+    "granularidad": [
+     "mensual",
+     "anual"
+    ]
+   },
+   "calculo": "derivado",
+   "limitaciones": [
+    "Temperatura media menos la media del mismo mes en 1991–2020 (anual: vs. media anual 1991–2020)."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "ndvi-modis",
+   "nombre": "Vegetación MODIS (NDVI)",
+   "unidad": "índice",
+   "fuente": "MODIS MOD13Q1 v6.1 (NDVI, 250 m, compuestos de 16 días), media de los píxeles en ~2 km alrededor del centroide",
+   "url": "https://modis.ornl.gov/data/modis_webservice.html",
+   "resolucion": "250 m, muestra ~2 km alrededor del centroide",
+   "licencia": "Datos NASA LP DAAC (libres). Servicio ORNL DAAC MODIS Web Service",
+   "agregacion": "media",
+   "mejorEs": "alto",
+   "rango": [
+    0,
+    0.9
+   ],
+   "cobertura": {
+    "desde": "2000-02",
+    "granularidad": [
+     "mensual",
+     "anual"
+    ]
+   },
+   "calculo": "modis",
+   "limitaciones": [
+    "Mes = fecha de inicio del compuesto. Es una MUESTRA del entorno del centroide, no el promedio de la zona. Sensor distinto de Sentinel-2/Landsat: no mezclar con el indicador ndvi."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "lst-modis",
+   "nombre": "Temp. superficial MODIS (LST)",
+   "unidad": "°C",
+   "fuente": "MODIS MOD11A2 v6.1 (LST diurna, 1 km, compuestos de 8 días; ~10:30 hora local), media de 3×3 píxeles alrededor del centroide",
+   "url": "https://modis.ornl.gov/data/modis_webservice.html",
+   "resolucion": "1 km, muestra 3×3 px alrededor del centroide",
+   "licencia": "Datos NASA LP DAAC (libres). Servicio ORNL DAAC MODIS Web Service",
+   "agregacion": "media",
+   "mejorEs": "bajo",
+   "rango": [
+    15,
+    50
+   ],
+   "cobertura": {
+    "desde": "2000-02",
+    "granularidad": [
+     "mensual",
+     "anual"
+    ]
+   },
+   "calculo": "modis",
+   "limitaciones": [
+    "Solo píxeles despejados (los nublados vienen como relleno y se descartan). Muestra del centroide, no promedio de la zona. Sensor distinto de Landsat: no mezclar con el indicador lst."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "poblacion",
+   "nombre": "Población (WorldPop 2020)",
+   "unidad": "habitantes",
+   "fuente": "WorldPop 2020 (Paraguay: 100 m constrained/BSGM; ciudades: 1 km Aggregated)",
+   "url": "https://hub.worldpop.org/",
+   "resolucion": "100 m (PY) / 1 km (ciudades)",
+   "licencia": "CC BY 4.0 (WorldPop, Univ. Southampton)",
+   "agregacion": "suma",
+   "mejorEs": "neutro",
+   "rango": [
+    0,
+    1000000
+   ],
+   "cobertura": {
+    "desde": "2020",
+    "granularidad": [
+     "anual"
+    ]
+   },
+   "calculo": "worldpop",
+   "limitaciones": [
+    "Estimación modelada 2020 (no censo). Suma de píxeles con centro dentro de la zona."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "densidad-poblacion",
+   "nombre": "Densidad de población",
+   "unidad": "hab/km²",
+   "fuente": "WorldPop 2020 (Paraguay: 100 m constrained/BSGM; ciudades: 1 km Aggregated)",
+   "url": "https://hub.worldpop.org/",
+   "resolucion": "100 m (PY) / 1 km (ciudades)",
+   "licencia": "CC BY 4.0 (WorldPop, Univ. Southampton)",
+   "agregacion": "media",
+   "mejorEs": "neutro",
+   "rango": [
+    0,
+    10000
+   ],
+   "cobertura": {
+    "desde": "2020",
+    "granularidad": [
+     "anual"
+    ]
+   },
+   "calculo": "worldpop",
+   "limitaciones": [
+    "población / área de la zona (área total, no sólo urbana)."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "areas-verdes-osm-ha",
+   "nombre": "Áreas verdes (OSM, ha)",
+   "unidad": "ha",
+   "fuente": "OpenStreetMap vía Overpass (corte actual)",
+   "url": "https://www.openstreetmap.org/copyright",
+   "resolucion": "vectorial (OSM)",
+   "licencia": "ODbL 1.0 © OpenStreetMap contributors",
+   "agregacion": "suma",
+   "mejorEs": "alto",
+   "rango": [
+    0,
+    2000
+   ],
+   "cobertura": {
+    "desde": "corte OSM actual",
+    "granularidad": [
+     "anual"
+    ]
+   },
+   "calculo": "osm",
+   "limitaciones": [
+    "leisure=park|playground|common y landuse=recreation_ground|village_green. Áreas superpuestas se cuentan dos veces; cada área se asigna a la zona de su centroide."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "areas-verdes-osm-pct",
+   "nombre": "Áreas verdes (% de la zona)",
+   "unidad": "%",
+   "fuente": "OpenStreetMap vía Overpass (corte actual)",
+   "url": "https://www.openstreetmap.org/copyright",
+   "resolucion": "vectorial (OSM)",
+   "licencia": "ODbL 1.0 © OpenStreetMap contributors",
+   "agregacion": "media",
+   "mejorEs": "alto",
+   "rango": [
+    0,
+    30
+   ],
+   "cobertura": {
+    "desde": "corte OSM actual",
+    "granularidad": [
+     "anual"
+    ]
+   },
+   "calculo": "osm",
+   "limitaciones": [
+    "área verde OSM / área de la zona."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "verde-osm-m2-hab",
+   "nombre": "Verde por habitante (OSM)",
+   "unidad": "m²/hab",
+   "fuente": "OpenStreetMap vía Overpass (corte actual)",
+   "url": "https://www.openstreetmap.org/copyright",
+   "resolucion": "vectorial (OSM) / 100 m",
+   "licencia": "ODbL 1.0 © OpenStreetMap contributors",
+   "agregacion": "media",
+   "mejorEs": "alto",
+   "rango": [
+    0,
+    30
+   ],
+   "cobertura": {
+    "desde": "corte OSM actual",
+    "granularidad": [
+     "anual"
+    ]
+   },
+   "calculo": "derivado",
+   "limitaciones": [
+    "Área verde de uso público mapeada en OSM / población WorldPop 2020. Depende de qué tan completo esté OSM. No es una norma ni la referencia OMS."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "centros-salud-osm",
+   "nombre": "Centros de salud (OSM)",
+   "unidad": "n",
+   "fuente": "OpenStreetMap vía Overpass (corte actual)",
+   "url": "https://www.openstreetmap.org/copyright",
+   "resolucion": "puntos (OSM)",
+   "licencia": "ODbL 1.0 © OpenStreetMap contributors",
+   "agregacion": "suma",
+   "mejorEs": "alto",
+   "rango": [
+    0,
+    200
+   ],
+   "cobertura": {
+    "desde": "corte OSM actual",
+    "granularidad": [
+     "anual"
+    ]
+   },
+   "calculo": "osm",
+   "limitaciones": [
+    "amenity=hospital|clinic|doctors o healthcare=hospital|clinic|centre. 0 puede significar «sin mapear»."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "escuelas-osm",
+   "nombre": "Escuelas y jardines (OSM)",
+   "unidad": "n",
+   "fuente": "OpenStreetMap vía Overpass (corte actual)",
+   "url": "https://www.openstreetmap.org/copyright",
+   "resolucion": "puntos (OSM)",
+   "licencia": "ODbL 1.0 © OpenStreetMap contributors",
+   "agregacion": "suma",
+   "mejorEs": "alto",
+   "rango": [
+    0,
+    300
+   ],
+   "cobertura": {
+    "desde": "corte OSM actual",
+    "granularidad": [
+     "anual"
+    ]
+   },
+   "calculo": "osm",
+   "limitaciones": [
+    "amenity=school|kindergarten."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "paradas-transporte-osm",
+   "nombre": "Paradas de transporte (OSM)",
+   "unidad": "n",
+   "fuente": "OpenStreetMap vía Overpass (corte actual)",
+   "url": "https://www.openstreetmap.org/copyright",
+   "resolucion": "puntos (OSM)",
+   "licencia": "ODbL 1.0 © OpenStreetMap contributors",
+   "agregacion": "suma",
+   "mejorEs": "alto",
+   "rango": [
+    0,
+    500
+   ],
+   "cobertura": {
+    "desde": "corte OSM actual",
+    "granularidad": [
+     "anual"
+    ]
+   },
+   "calculo": "osm",
+   "limitaciones": [
+    "highway=bus_stop, estaciones/apeaderos/tranvía. Poco mapeado fuera de ciudades."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "pob-800m-verde",
+   "nombre": "Población a ≤800 m de áreas verdes",
+   "unidad": "%",
+   "fuente": "OpenStreetMap vía Overpass (corte actual)",
+   "url": "https://www.openstreetmap.org/copyright",
+   "resolucion": "100 m, 800 m en línea recta",
+   "licencia": "ODbL 1.0 © OpenStreetMap contributors",
+   "agregacion": "media",
+   "mejorEs": "alto",
+   "rango": [
+    0,
+    100
+   ],
+   "cobertura": {
+    "desde": "corte OSM actual",
+    "granularidad": [
+     "anual"
+    ]
+   },
+   "calculo": "derivado",
+   "limitaciones": [
+    "Sólo Paraguay. % de población (WorldPop 100 m) a ≤800 m en línea recta de un borde de área verde. Simplificación del «15 min a pie»; no usa red vial."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "pob-800m-salud",
+   "nombre": "Población a ≤800 m de un centro de salud",
+   "unidad": "%",
+   "fuente": "OpenStreetMap vía Overpass (corte actual)",
+   "url": "https://www.openstreetmap.org/copyright",
+   "resolucion": "100 m, 800 m en línea recta",
+   "licencia": "ODbL 1.0 © OpenStreetMap contributors",
+   "agregacion": "media",
+   "mejorEs": "alto",
+   "rango": [
+    0,
+    100
+   ],
+   "cobertura": {
+    "desde": "corte OSM actual",
+    "granularidad": [
+     "anual"
+    ]
+   },
+   "calculo": "derivado",
+   "limitaciones": [
+    "Sólo Paraguay. % de población a ≤800 m en línea recta de un centro de salud OSM."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "pob-800m-escuela",
+   "nombre": "Población a ≤800 m de una escuela",
+   "unidad": "%",
+   "fuente": "OpenStreetMap vía Overpass (corte actual)",
+   "url": "https://www.openstreetmap.org/copyright",
+   "resolucion": "100 m, 800 m en línea recta",
+   "licencia": "ODbL 1.0 © OpenStreetMap contributors",
+   "agregacion": "media",
+   "mejorEs": "alto",
+   "rango": [
+    0,
+    100
+   ],
+   "cobertura": {
+    "desde": "corte OSM actual",
+    "granularidad": [
+     "anual"
+    ]
+   },
+   "calculo": "derivado",
+   "limitaciones": [
+    "Sólo Paraguay. % de población a ≤800 m en línea recta de una escuela OSM."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "pob-800m-transporte",
+   "nombre": "Población a ≤800 m de transporte",
+   "unidad": "%",
+   "fuente": "OpenStreetMap vía Overpass (corte actual)",
+   "url": "https://www.openstreetmap.org/copyright",
+   "resolucion": "100 m, 800 m en línea recta",
+   "licencia": "ODbL 1.0 © OpenStreetMap contributors",
+   "agregacion": "media",
+   "mejorEs": "alto",
+   "rango": [
+    0,
+    100
+   ],
+   "cobertura": {
+    "desde": "corte OSM actual",
+    "granularidad": [
+     "anual"
+    ]
+   },
+   "calculo": "derivado",
+   "limitaciones": [
+    "Sólo Paraguay. % de población a ≤800 m en línea recta de una parada OSM."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "rwi",
+   "nombre": "Índice de riqueza relativa (Meta)",
+   "unidad": "índice",
+   "fuente": "Relative Wealth Index (Meta/HDX), celdas de 2,4 km, corte 2021",
+   "url": "https://data.humdata.org/dataset/relative-wealth-index",
+   "resolucion": "2,4 km",
+   "licencia": "CC BY-NC 4.0 (solo uso no comercial)",
+   "agregacion": "media",
+   "mejorEs": "alto",
+   "rango": [
+    -1.5,
+    1.5
+   ],
+   "cobertura": {
+    "desde": "2021 (corte único)",
+    "granularidad": [
+     "anual"
+    ]
+   },
+   "calculo": "hdx",
+   "limitaciones": [
+    "Relativo dentro del país; no es ingreso. Promedio simple de celdas cuyo centro cae en la zona (null si ninguna)."
+   ],
+   "estado": "pipeline",
+   "usoNoComercial": true
+  },
+  {
+   "id": "incendios-viirs",
+   "nombre": "Detecciones de incendio (VIIRS)",
+   "unidad": "detecciones",
+   "fuente": "NASA FIRMS VIIRS S-NPP 375 m, archivos anuales por país, confianza ≠ baja, type=0",
+   "url": "https://firms.modaps.eosdis.nasa.gov/download/",
+   "resolucion": "375 m",
+   "licencia": "NASA EOSDIS, uso libre con cita",
+   "agregacion": "suma",
+   "mejorEs": "bajo",
+   "rango": [
+    0,
+    500
+   ],
+   "cobertura": {
+    "desde": "2012-01",
+    "granularidad": [
+     "mensual",
+     "anual"
+    ]
+   },
+   "calculo": "firms",
+   "limitaciones": [
+    "2012–2025 (el año en curso no está publicado sin MAP_KEY). Detecciones ≠ hectáreas quemadas."
+   ],
+   "estado": "pipeline"
+  },
+  {
+   "id": "incendios-frp-viirs",
+   "nombre": "Potencia radiativa de incendios (FRP)",
+   "unidad": "MW",
+   "fuente": "NASA FIRMS VIIRS S-NPP (FRP)",
+   "url": "https://firms.modaps.eosdis.nasa.gov/download/",
+   "resolucion": "375 m",
+   "licencia": "NASA EOSDIS, uso libre con cita",
+   "agregacion": "suma",
+   "mejorEs": "bajo",
+   "rango": [
+    0,
+    5000
+   ],
+   "cobertura": {
+    "desde": "2012-01",
+    "granularidad": [
+     "mensual",
+     "anual"
+    ]
+   },
+   "calculo": "firms",
+   "limitaciones": [
+    "Potencia radiativa total de las detecciones; sumada, no media."
+   ],
+   "estado": "pipeline"
+  }
+ ]
+}

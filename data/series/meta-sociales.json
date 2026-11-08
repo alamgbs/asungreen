@@ -1,0 +1,201 @@
+{
+ "generado": "2026-11-08T18:58:52.956Z",
+ "worldpop": {
+  "anio": 2020,
+  "pais_total_py": 7470739
+ },
+ "osm": {
+  "PY-verde": {
+   "timestamp_osm": "2026-11-08T17:13:36Z",
+   "elementos": 2400
+  },
+  "PY-salud": {
+   "timestamp_osm": "2026-11-08T17:15:39Z",
+   "elementos": 673
+  },
+  "PY-escuela": {
+   "timestamp_osm": "2026-11-08T17:15:39Z",
+   "elementos": 3771
+  },
+  "PY-transporte": {
+   "timestamp_osm": "2026-11-08T17:16:41Z",
+   "elementos": 897
+  },
+  "ciudad-buenos-aires-verde": {
+   "timestamp_osm": "2026-11-08T17:17:44Z",
+   "elementos": 2436
+  },
+  "ciudad-buenos-aires-salud": {
+   "timestamp_osm": "2026-11-08T17:18:46Z",
+   "elementos": 605
+  },
+  "ciudad-buenos-aires-escuela": {
+   "timestamp_osm": "2026-11-08T17:18:46Z",
+   "elementos": 2826
+  },
+  "ciudad-buenos-aires-transporte": {
+   "timestamp_osm": "2026-11-08T17:19:48Z",
+   "elementos": 8202
+  },
+  "ciudad-rio-verde": {
+   "timestamp_osm": "2026-11-08T17:20:48Z",
+   "elementos": 3128
+  },
+  "ciudad-rio-salud": {
+   "timestamp_osm": "2026-05-31T22:37:44Z",
+   "elementos": 800
+  },
+  "ciudad-rio-escuela": {
+   "timestamp_osm": "2026-11-08T17:35:06Z",
+   "elementos": 2298
+  },
+  "ciudad-rio-transporte": {
+   "timestamp_osm": "2026-11-08T17:39:06Z",
+   "elementos": 2902
+  },
+  "ciudad-madrid-verde": {
+   "timestamp_osm": "2026-11-08T17:40:06Z",
+   "elementos": 7114
+  },
+  "ciudad-madrid-salud": {
+   "timestamp_osm": "2026-11-08T17:40:06Z",
+   "elementos": 810
+  },
+  "ciudad-madrid-escuela": {
+   "timestamp_osm": "2026-11-08T17:41:07Z",
+   "elementos": 2588
+  },
+  "ciudad-madrid-transporte": {
+   "timestamp_osm": "2026-11-08T17:42:09Z",
+   "elementos": 8590
+  },
+  "ciudad-barcelona-verde": {
+   "timestamp_osm": "2026-11-08T17:42:09Z",
+   "elementos": 2480
+  },
+  "ciudad-barcelona-salud": {
+   "timestamp_osm": "2026-11-08T17:43:13Z",
+   "elementos": 430
+  },
+  "ciudad-barcelona-escuela": {
+   "timestamp_osm": "2026-11-08T17:44:17Z",
+   "elementos": 972
+  },
+  "ciudad-barcelona-transporte": {
+   "timestamp_osm": "2026-11-08T17:44:17Z",
+   "elementos": 4098
+  },
+  "ciudad-new-york-verde": {
+   "timestamp_osm": "2026-11-08T17:45:21Z",
+   "elementos": 6426
+  },
+  "ciudad-new-york-salud": {
+   "timestamp_osm": "2026-11-08T17:46:21Z",
+   "elementos": 1879
+  },
+  "ciudad-new-york-escuela": {
+   "timestamp_osm": "2026-11-08T17:51:24Z",
+   "elementos": 3677
+  },
+  "ciudad-new-york-transporte": {
+   "timestamp_osm": "2026-11-08T17:52:25Z",
+   "elementos": 15433
+  },
+  "ciudad-panama-verde": {
+   "timestamp_osm": "2026-11-08T17:53:28Z",
+   "elementos": 927
+  },
+  "ciudad-panama-salud": {
+   "timestamp_osm": "2026-11-08T17:53:28Z",
+   "elementos": 184
+  },
+  "ciudad-panama-escuela": {
+   "timestamp_osm": "2026-11-08T17:54:34Z",
+   "elementos": 341
+  },
+  "ciudad-panama-transporte": {
+   "timestamp_osm": "2026-11-08T18:00:36Z",
+   "elementos": 946
+  },
+  "ciudad-mexico-df-verde": {
+   "timestamp_osm": "2026-11-08T18:08:50Z",
+   "elementos": 4357
+  },
+  "ciudad-mexico-df-salud": {
+   "timestamp_osm": "2026-11-08T18:08:50Z",
+   "elementos": 1215
+  },
+  "ciudad-mexico-df-escuela": {
+   "timestamp_osm": "2026-11-08T18:09:47Z",
+   "elementos": 3308
+  },
+  "ciudad-mexico-df-transporte": {
+   "timestamp_osm": "2026-11-08T18:10:51Z",
+   "elementos": 2775
+  },
+  "ciudad-paris-verde": {
+   "timestamp_osm": "2026-11-08T18:15:56Z",
+   "elementos": 2427
+  },
+  "ciudad-paris-salud": {
+   "timestamp_osm": "2026-11-08T18:17:02Z",
+   "elementos": 948
+  },
+  "ciudad-paris-escuela": {
+   "timestamp_osm": "2026-11-08T18:18:05Z",
+   "elementos": 2478
+  },
+  "ciudad-paris-transporte": {
+   "timestamp_osm": "2026-11-08T18:24:06Z",
+   "elementos": 4894
+  },
+  "ciudad-heidelberg-verde": {
+   "timestamp_osm": "2026-11-08T18:25:05Z",
+   "elementos": 564
+  },
+  "ciudad-heidelberg-salud": {
+   "timestamp_osm": "2026-11-08T18:25:05Z",
+   "elementos": 323
+  },
+  "ciudad-heidelberg-escuela": {
+   "timestamp_osm": "2026-11-08T18:32:09Z",
+   "elementos": 292
+  },
+  "ciudad-heidelberg-transporte": {
+   "timestamp_osm": "2026-11-08T18:32:09Z",
+   "elementos": 836
+  },
+  "ciudad-berlin-verde": {
+   "timestamp_osm": "2026-11-08T18:33:13Z",
+   "elementos": 9534
+  },
+  "ciudad-berlin-salud": {
+   "timestamp_osm": "2026-11-08T18:34:19Z",
+   "elementos": 2118
+  },
+  "ciudad-berlin-escuela": {
+   "timestamp_osm": "2026-05-31T22:37:44Z",
+   "elementos": 3846
+  },
+  "ciudad-berlin-transporte": {
+   "timestamp_osm": "2026-07-24T11:04:51Z",
+   "elementos": 9405
+  },
+  "ciudad-roma-verde": {
+   "timestamp_osm": "2026-11-08T18:58:36Z",
+   "elementos": 2400
+  },
+  "ciudad-roma-salud": {
+   "timestamp_osm": "2026-11-08T18:59:36Z",
+   "elementos": 377
+  },
+  "ciudad-roma-escuela": {
+   "timestamp_osm": "2026-11-08T19:05:49Z",
+   "elementos": 1181
+  },
+  "ciudad-roma-transporte": {
+   "timestamp_osm": "2026-11-08T19:06:50Z",
+   "elementos": 10192
+  }
+ }
+}

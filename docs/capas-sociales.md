@@ -1,6 +1,6 @@
 # Capas sociales (Fase 3): estado y verificación de fuentes
 
-Estado: 2026-11-08 · **Parcial**: los scripts están escritos; solo se verificó el acceso a las fuentes. Nada de esto se ejecutó todavía, y `data/series/indicadores-nuevos.json` NO existe aún.
+Estado: 2026-11-08 · Capas abiertas **ejecutadas con datos reales** (población, OSM, acceso 800 m, RWI, incendios). Capas de GEE escritas, **no ejecutadas** (requieren credencial). Definiciones para integrar en `lib/indicadores.ts`: `data/series/indicadores-nuevos.json` (`node scripts/pipeline/gen-indicadores-nuevos.mjs`).
 
 ## Fuentes verificadas con fetch real (sin credenciales)
 
@@ -10,26 +10,26 @@ Estado: 2026-11-08 · **Parcial**: los scripts están escritos; solo se verific�
 | 3.2 RWI Meta | HDX, `Paraguay_relative_wealth_index.csv` (405 KB). También AR, BR, MX; no cubre ES/FR/DE/IT/US | Descarga directa OK | **CC BY-NC 4.0** (solo uso no comercial). Corte único 2021, relativo dentro de cada país: no comparable entre países |
 | 3.3 OSM | Overpass API | Funciona con User-Agent propio; sin UA devuelve 406 | ODbL 1.0 (atribución obligatoria) |
 | 3.5 Incendios | CSV anuales de FIRMS `.../data/country/viirs-snpp/{año}/viirs-snpp_{año}_Paraguay.csv` | Sin clave: 2012–2025 OK (VIIRS S-NPP 375 m). El 2026 da 404 y la API en tiempo casi real exige `MAP_KEY` | NASA, uso libre con cita |
-| 3.4 NO₂, 3.6 Hansen, 3.7 JRC | Google Earth Engine | **Requieren credencial**; no escritos todavía | — |
+| 3.4 NO₂, 3.6 Hansen, 3.7 JRC | Google Earth Engine | **Requieren credencial**; escritos en `gee/capas.mjs`, sin ejecutar | — |
 
-## Escrito pero sin ejecutar
+## Ejecutado (datos reales en `data/series`)
 
-- `scripts/pipeline/open/sociales.mjs` (usa `overpass.mjs`, `worldpop.mjs`, `lib/geo.mjs`). Produce `poblacion`, `densidad-poblacion`, `areas-verdes-osm-ha`, `areas-verdes-osm-pct`, `verde-osm-m2-hab`, `centros-salud-osm`, `escuelas-osm`, `paradas-transporte-osm` y, solo para Paraguay, `pob-800m-{verde,salud,escuela,transporte}`.
-- El acceso «15 min a pie» se aproxima con **800 m en línea recta** desde el centro del píxel de población hasta el borde del área verde o el punto de servicio más cercano. No usa red vial.
-- Las ciudades extranjeras no tienen `pob-800m-*`: los píxeles de 1 km son demasiado gruesos para un umbral de 800 m.
-- Las áreas verdes de OSM no se unen entre sí: las superpuestas se cuentan dos veces. Una cifra de 0 paradas o centros en zonas rurales puede significar «sin mapear».
+| Script | Indicadores | Chequeo de plausibilidad |
+|---|---|---|
+| `open/sociales.mjs` | `poblacion`, `densidad-poblacion`, `areas-verdes-osm-ha/-pct`, `verde-osm-m2-hab`, `centros-salud-osm`, `escuelas-osm`, `paradas-transporte-osm`, `pob-800m-{verde,salud,escuela,transporte}` (solo PY) | Población PY 7,47 M; Asunción 570 mil hab; Buenos Aires 3,04 M |
+| `open/rwi.mjs` | `rwi` (2021, solo PY): 255 de 266 zonas con valor, el resto `null` | — |
+| `open/firms.mjs` | `incendios-viirs`, `incendios-frp-viirs` mensual 2012–2025, solo PY | — |
+
+Límites: ciudades extranjeras con población a 1 km (Berlín da 3,23 M con el polígono usado, vs. cifras oficiales mayores: el polígono OSM/píxeles de 1 km pesan); sin `pob-800m-*`; sin RWI en ES/FR/DE/IT/US; Overpass puede fallar (504): una ciudad que falla queda sin indicadores OSM, nunca con ceros inventados. Los centros del píxel decide la zona: en bordes hay error de ≤ 1 píxel.
+
+## Escrito, no ejecutable aquí (requiere credencial GEE)
+
+`scripts/pipeline/gee/capas.mjs`: NO₂ Sentinel-5P (`no2-s5p`, µmol/m², 2018-07 →), pérdida forestal Hansen (`perdida-forestal-hansen`, % de cobertura 2000 ≥30 % perdida por año, 2001–2024) y agua superficial JRC (`agua-superficial-jrc`, % mensual, solo hasta 2022-01). IDs verificados en el catálogo STAC. Falta correr `gee_bench.mjs` y una prueba corta antes del backfill, y agregar sus entradas a `catalogo.mjs`.
 
 ## Pendiente
 
-1. Correr `node scripts/pipeline/open/sociales.mjs`. Antes de confiar en los datos, comprobar que el total de población de `PY` sea plausible.
-2. Escribir los scripts de FIRMS (conteo mensual y suma de FRP por zona, confianza ≠ baja, `type = 0`) y de RWI.
-3. Escribir las capas de GEE (NO₂ Sentinel-5P, Hansen, JRC agua) y verificar los IDs de dataset en el catálogo antes de fijarlos.
-4. Isla de calor urbana: solo se puede aproximar con MODIS (píxeles de 1 km). Requiere excluir agua y tiene límite de resolución. No implementado.
-5. Agregar los nuevos ids a `scripts/pipeline/lib/catalogo.mjs` y a los rangos de `verificar.mjs`, generar `data/series/indicadores-nuevos.json` para que el master los integre en `lib/indicadores.ts`, y reconstruir el manifest.
-6. Subir `PIPELINE_VERSION` solo si cambia el cálculo de indicadores existentes. Los indicadores nuevos no lo exigen.
-
-## Notas técnicas
-
-- `lib/series-io.mjs` ahora ignora `indicadores-*.json` y `meta-*.json` al construir el manifest y al verificar.
-- Dependencia nueva: `geotiff` (devDependency) para leer los GeoTIFF de WorldPop.
-- La caché de descargas está en `scripts/pipeline/.cache/` (ignorada por git).
+1. **Isla de calor urbana (3.8)**: no implementada. Con MODIS (1 km) sería una aproximación gruesa y exige excluir agua; con GEE/Landsat (30 m) es viable. Verde por habitante basado en NDVI tampoco (solo la versión OSM).
+2. MODIS de ciudades extranjeras: falla con HTTP 400 (la lista de fechas del tile de Paraguay no vale para otros tiles); queda en `manifest.pendientes`. Arreglo: pedir `/dates` por zona.
+3. FIRMS año en curso (requiere `FIRMS_MAP_KEY`) y Hansen/JRC/NO₂ en el workflow cuando exista `GEE_SA_JSON`.
+4. Integrar `indicadores-nuevos.json` en `lib/indicadores.ts` (lo hace el master); `rwi` es **solo uso no comercial**.
+5. Tras terminar `open/run.mjs` en curso, correr `node scripts/pipeline/manifest.mjs` (la versión en memoria de ese proceso reescribe el manifest sin ignorar archivos auxiliares).

@@ -9,8 +9,10 @@ import { SERIES_DIR, parseMes, esArchivoZona } from './lib/series-io.mjs';
 
 const RANGOS = {
   'temp-aire': [-15, 45], 'temp-max-aire': [-15, 55], 'precipitacion': [0, 2500], 'dias-35c': [0, 31],
-  'anomalia-temp-aire': [-12, 12], 'ndvi-modis': [-0.2, 1], 'lst-modis': [-20, 70], ndvi: [-1, 1], lst: [-20, 80],
+  'anomalia-temp-aire': [-12, 12], 'ndvi-modis': [-0.2, 1], 'lst-modis': [-20, 70], ndvi: [-1, 1], lst: [-20, 80], poblacion: [0, 1e8], 'densidad-poblacion': [0, 5e4], 'pob-800m-verde': [0, 100], 'pob-800m-salud': [0, 100], 'pob-800m-escuela': [0, 100], 'pob-800m-transporte': [0, 100], 'areas-verdes-osm-pct': [0, 100], rwi: [-5, 5], 'incendios-viirs': [0, 1e6],
 };
+// Rangos anuales de indicadores que se SUMAN (el mensual no aplica)
+const RANGOS_ANUAL = { 'dias-35c': [0, 366], precipitacion: [0, 6000], 'incendios-viirs': [0, 1e6], 'incendios-frp-viirs': [0, 1e8] };
 const manifest = JSON.parse(readFileSync(join(SERIES_DIR, 'manifest.json'), 'utf8'));
 const errs = [];
 const hash = createHash('sha256');
@@ -20,9 +22,9 @@ for (const f of files) {
   const z = JSON.parse(txt);
   if (z.version !== manifest.pipelineVersion) errs.push(`${f}: versión ${z.version} ≠ manifest ${manifest.pipelineVersion}`);
   for (const [id, ind] of Object.entries(z.indicadores)) {
-    const [lo, hi] = RANGOS[id] ?? [-Infinity, Infinity];
     for (const g of ['mensual', 'anual']) {
       const s = ind[g]; if (!s) continue;
+      const [lo, hi] = (g === 'anual' && RANGOS_ANUAL[id]) || RANGOS[id] || [-Infinity, Infinity];
       if (s.v.length !== s.n.length) errs.push(`${f}/${id}/${g}: largo v≠n`);
       if (s.v.some((x) => x === undefined || (x !== null && (typeof x !== 'number' || !Number.isFinite(x))))) errs.push(`${f}/${id}/${g}: valor inválido`);
       const mal = s.v.filter((x) => x !== null && (x < lo || x > hi)).length;
