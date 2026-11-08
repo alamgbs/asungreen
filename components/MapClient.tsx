@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import Legend from './Legend';
 import StatusBar from './StatusBar';
+import MethodologyModal from './MethodologyModal';
 import type { LayerType } from '@/lib/types';
-import { INITIAL_VIEW_STATE } from '@/lib/constants';
+import { serializeMapState, type MapUrlState } from '@/lib/urlState';
 
 const MapView = dynamic(() => import('./MapView'), {
   ssr: false,
@@ -27,7 +28,7 @@ const MapView = dynamic(() => import('./MapView'), {
         <p
           style={{
             fontFamily: 'var(--font-pixel)',
-            fontSize: '7px',
+            fontSize: '10px',
             color: 'var(--neon-green)',
             textShadow: 'var(--glow-green)',
           }}
@@ -39,32 +40,55 @@ const MapView = dynamic(() => import('./MapView'), {
   ),
 });
 
-function currentSeason(): string {
-  const m = new Date().getMonth() + 1;
-  if (m >= 9 && m <= 11) return 'spring';
-  if (m === 12 || m <= 2) return 'summer';
-  if (m >= 3 && m <= 5) return 'autumn';
-  return 'winter';
-}
-
-export default function MapClient() {
-  const [activeLayers, setActiveLayers] = useState<Record<LayerType, boolean>>({
-    soilTemp: true,
-    traffic: false,
-    ndvi: false,
-  });
-  const [hour, setHour]       = useState(8);
-  const [years, setYears]     = useState<number[]>([new Date().getFullYear()]);
-  const [seasons, setSeasons] = useState<string[]>([currentSeason()]);
-  const [selectedAoi, setSelectedAoi] = useState<string | null>(null);
+export default function MapClient({ initial }: { initial: MapUrlState }) {
+  const [activeLayers, setActiveLayers] = useState<Record<LayerType, boolean>>(initial.layers);
+  const [hour, setHour]       = useState(initial.hour);
+  const [years, setYears]     = useState<number[]>(initial.years);
+  const [seasons, setSeasons] = useState<string[]>(initial.seasons);
+  const [selectedAoi, setSelectedAoi] = useState<string | null>(initial.aoi);
+  const [showMethod, setShowMethod] = useState(false);
   const [geeStats, setGeeStats] = useState<
     Partial<Record<'ndvi' | 'soilTemp', { min: number; max: number }>>
   >({});
-  const [coords, setCoords] = useState({
-    lat: INITIAL_VIEW_STATE.latitude,
-    lng: INITIAL_VIEW_STATE.longitude,
-    zoom: INITIAL_VIEW_STATE.zoom,
-  });
+  const [coords, setCoords] = useState(initial.view);
+  // Centro/zoom reales del mapa (para la URL); `null` hasta que el usuario o la URL fijan una vista.
+  const viewRef = useRef<{ lat: number; lng: number; zoom: number } | null>(
+    initial.hasView ? initial.view : null,
+  );
+
+  // ── Estado → URL (debounce, history.replaceState) ───
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stateRef = useRef({ selectedAoi, activeLayers, years, seasons, hour });
+
+  const flushUrl = useCallback(() => {
+    const st = stateRef.current;
+    const qs = serializeMapState(
+      { aoi: st.selectedAoi, layers: st.activeLayers, years: st.years, seasons: st.seasons,
+        hour: st.hour, view: viewRef.current ?? initial.view },
+      viewRef.current !== null,
+    );
+    const next = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+    if (next !== window.location.pathname + window.location.search + window.location.hash) {
+      window.history.replaceState(window.history.state, '', next);
+    }
+  }, [initial.view]);
+
+  const scheduleUrlWrite = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(flushUrl, 400);
+  }, [flushUrl]);
+
+  useEffect(() => {
+    stateRef.current = { selectedAoi, activeLayers, years, seasons, hour };
+    scheduleUrlWrite();
+  }, [selectedAoi, activeLayers, years, seasons, hour, scheduleUrlWrite]);
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  const handleViewChange = useCallback((lat: number, lng: number, zoom: number) => {
+    viewRef.current = { lat, lng, zoom };
+    scheduleUrlWrite();
+  }, [scheduleUrlWrite]);
 
   const toggleLayer = (id: LayerType) =>
     setActiveLayers((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -91,6 +115,8 @@ export default function MapClient() {
       style={{ background: 'var(--bg-base)' }}
     >
       <MapView
+        initialView={initial.hasView ? initial.view : undefined}
+        onViewChange={handleViewChange}
         activeLayers={activeLayers}
         hour={hour}
         onCoordsChange={handleCoordsChange}
@@ -99,7 +125,7 @@ export default function MapClient() {
         selectedAoi={selectedAoi}
         onStatsChange={handleStatsChange}
       />
-      <Header />
+      <Header onOpenMethodology={() => setShowMethod(true)} />
       <Sidebar
         activeLayers={activeLayers}
         onToggleLayer={toggleLayer}
@@ -112,9 +138,11 @@ export default function MapClient() {
         onSeasonsChange={setSeasons}
         selectedAoi={selectedAoi}
         onAoiChange={handleAoiChange}
+        onOpenMethodology={() => setShowMethod(true)}
       />
       <Legend activeLayers={activeLayers} geeStats={geeStats} />
       <StatusBar lat={coords.lat} lng={coords.lng} zoom={coords.zoom} />
+      {showMethod && <MethodologyModal onClose={() => setShowMethod(false)} />}
     </div>
   );
 }

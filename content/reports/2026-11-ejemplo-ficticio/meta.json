@@ -1,0 +1,10 @@
+{
+  "title": "Reporte de ejemplo - sin datos reales",
+  "date": "2026-11-01",
+  "summary": "Reporte ficticio que demuestra el formato de la sección de reportes. No contiene datos reales ni conclusiones.",
+  "zones": ["asuncion"],
+  "indicators": ["soilTemp", "ndvi"],
+  "tags": ["ejemplo", "demo"],
+  "author": "AsunGreen (ejemplo)",
+  "example": true
+}

@@ -1,8 +1,11 @@
 'use client';
 
-import { Thermometer, Car, TreePine } from 'lucide-react';
+import { useState } from 'react';
+import { Thermometer, Car, TreePine, ChevronUp, ChevronDown } from 'lucide-react';
 import type { LayerType } from '@/lib/types';
 import { AOIS } from '@/lib/aois';
+import { TRAFFIC_BY_HOUR } from '@/lib/constants';
+import { LAYER_INFO, SIM_BADGE } from '@/lib/layerInfo';
 
 interface SidebarProps {
   activeLayers: Record<LayerType, boolean>;
@@ -16,13 +19,14 @@ interface SidebarProps {
   onSeasonsChange: (seasons: string[]) => void;
   selectedAoi: string | null;
   onAoiChange: (id: string | null) => void;
+  onOpenMethodology: () => void;
 }
 
-const SEASON_LABELS: { id: string; label: string }[] = [
-  { id: 'spring', label: 'PRIM' },
-  { id: 'summer', label: 'VER'  },
-  { id: 'autumn', label: 'OTO'  },
-  { id: 'winter', label: 'INV'  },
+const SEASON_LABELS: { id: string; label: string; full: string }[] = [
+  { id: 'spring', label: 'PRIM', full: 'Primavera' },
+  { id: 'summer', label: 'VER',  full: 'Verano' },
+  { id: 'autumn', label: 'OTO',  full: 'Otoño' },
+  { id: 'winter', label: 'INV',  full: 'Invierno' },
 ];
 
 const AVAILABLE_YEARS: number[] = Array.from(
@@ -30,38 +34,10 @@ const AVAILABLE_YEARS: number[] = Array.from(
   (_, i) => new Date().getFullYear() - i,
 );
 
-const LAYERS: {
-  id: LayerType;
-  name: string;
-  subtitle: string;
-  source: string;
-  icon: React.ReactNode;
-  color: string;
-}[] = [
-  {
-    id: 'soilTemp',
-    name: 'TEMPERATURA',
-    subtitle: 'LANDSAT·8/9·LST·30m',
-    source: 'LANDSAT 8+9 · 30m',
-    icon: <Thermometer size={13} />,
-    color: 'var(--neon-orange)',
-  },
-  {
-    id: 'traffic',
-    name: 'TRAFICO',
-    subtitle: 'SIMULACION·OSM',
-    source: 'DATOS SIMULADOS',
-    icon: <Car size={13} />,
-    color: 'var(--neon-cyan)',
-  },
-  {
-    id: 'ndvi',
-    name: 'VEGETACION',
-    subtitle: 'NDVI·SENTINEL-2·10m',
-    source: 'SENTINEL-2 · 10m',
-    icon: <TreePine size={13} />,
-    color: 'var(--neon-green)',
-  },
+const LAYERS: { id: LayerType; icon: React.ReactNode; color: string }[] = [
+  { id: 'soilTemp', icon: <Thermometer size={16} />, color: 'var(--neon-orange)' },
+  { id: 'traffic',  icon: <Car size={16} />,         color: 'var(--neon-cyan)'   },
+  { id: 'ndvi',     icon: <TreePine size={16} />,    color: 'var(--neon-green)'  },
 ];
 
 function pad(n: number) {
@@ -75,12 +51,21 @@ function formatHour(h: number): string {
   return `${display}:00 ${period}`;
 }
 
-const TRAFFIC_BY_HOUR = [
-  0.05, 0.03, 0.02, 0.02, 0.03, 0.10,
-  0.30, 0.70, 0.95, 0.80, 0.60, 0.55,
-  0.55, 0.58, 0.60, 0.65, 0.78, 0.98,
-  0.92, 0.75, 0.58, 0.40, 0.22, 0.10,
-];
+function pillStyle(active: boolean, color: string, glow: string): React.CSSProperties {
+  return {
+    borderColor: active ? color : undefined,
+    background:  active ? `${color}22` : undefined,
+    color:       active ? color : undefined,
+    textShadow:  active ? glow : 'none',
+  };
+}
+
+const SECTION_TITLE: React.CSSProperties = {
+  fontFamily: 'var(--font-pixel)',
+  fontSize: '9px',
+  letterSpacing: '0.04em',
+  marginBottom: '10px',
+};
 
 export default function Sidebar({
   activeLayers,
@@ -94,7 +79,11 @@ export default function Sidebar({
   onSeasonsChange,
   selectedAoi,
   onAoiChange,
+  onOpenMethodology,
 }: SidebarProps) {
+  // Solo aplica en móvil (< 768px); en escritorio el CSS ignora el estado.
+  const [sheetOpen, setSheetOpen] = useState(false);
+
   function toggleYear(y: number) {
     if (years.includes(y) && years.length === 1) return;
     onYearsChange(years.includes(y) ? years.filter(v => v !== y) : [...years, y]);
@@ -114,64 +103,54 @@ export default function Sidebar({
 
   return (
     <aside
-      className="absolute left-3 z-40 flex flex-col gap-2 fade-in-up"
-      style={{ top: '56px', bottom: '36px', width: '268px' }}
+      id="app-sidebar"
+      className="app-sidebar fade-in-up"
+      data-open={sheetOpen}
+      aria-label="Panel de capas y filtros"
     >
+      {/* ── Asa del bottom sheet (solo móvil) ─────── */}
+      <button
+        type="button"
+        className="sheet-handle"
+        onClick={() => setSheetOpen((v) => !v)}
+        aria-expanded={sheetOpen}
+        aria-controls="app-sidebar"
+      >
+        <span>{sheetOpen ? 'Ocultar capas y filtros' : 'Capas y filtros'}</span>
+        {sheetOpen ? <ChevronDown size={18} aria-hidden /> : <ChevronUp size={18} aria-hidden />}
+      </button>
+
       {/* ── System header ──────────────────────────── */}
       <div className="terminal-panel">
-        <div
-          style={{
-            fontFamily: 'var(--font-pixel)',
-            fontSize: '7px',
-            color: 'var(--neon-green)',
-            textShadow: 'var(--glow-green)',
-            letterSpacing: '0.05em',
-          }}
-        >
+        <div style={{ ...SECTION_TITLE, marginBottom: 0, color: 'var(--neon-green)', textShadow: 'var(--glow-green)' }}>
           MAP_LAYERS.SH
         </div>
-        <p
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '10px',
-            color: 'var(--text-muted)',
-            marginTop: '5px',
-          }}
-        >
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
           DEPT·CENTRAL · ASU · PY
         </p>
+        <button
+          type="button"
+          className="pill-btn"
+          onClick={onOpenMethodology}
+          style={{ marginTop: '8px', width: '100%', color: 'var(--neon-cyan)', borderColor: 'var(--neon-cyan)' }}
+        >
+          ¿Cómo se calcula?
+        </button>
       </div>
 
       {/* ── AOI Filter ─────────────────────────────────── */}
-      <div className="terminal-panel fade-in-up">
-        <div
-          style={{
-            fontFamily:    'var(--font-pixel)',
-            fontSize:      '6px',
-            color:         'var(--neon-cyan)',
-            textShadow:    'var(--glow-cyan)',
-            letterSpacing: '0.04em',
-            marginBottom:  '10px',
-          }}
-        >
-          &gt; AOI_FILTER
+      <div className="terminal-panel fade-in-up" role="group" aria-labelledby="aoi-title">
+        <div id="aoi-title" style={{ ...SECTION_TITLE, color: 'var(--neon-cyan)', textShadow: 'var(--glow-cyan)' }}>
+          &gt; ZONA
         </div>
-        <div className="flex gap-1 flex-wrap">
-          {/* GLOBAL pill — always first */}
+        <div className="flex gap-1.5 flex-wrap">
           <button
+            type="button"
+            className="pill-btn"
             onClick={() => onAoiChange(null)}
-            style={{
-              fontFamily:    'var(--font-pixel)',
-              fontSize:      '6px',
-              letterSpacing: '0.04em',
-              padding:       '3px 6px',
-              border:        `1px solid ${selectedAoi === null ? 'var(--neon-cyan)' : 'var(--bg-border)'}`,
-              background:    selectedAoi === null ? 'var(--neon-cyan)22' : 'transparent',
-              color:         selectedAoi === null ? 'var(--neon-cyan)' : 'var(--text-muted)',
-              textShadow:    selectedAoi === null ? 'var(--glow-cyan)' : 'none',
-              cursor:        'pointer',
-              transition:    'all 0.15s',
-            }}
+            aria-pressed={selectedAoi === null}
+            aria-label="Zona: global (todo el mapa)"
+            style={pillStyle(selectedAoi === null, 'var(--neon-cyan)', 'var(--glow-cyan)')}
           >
             GLOBAL
           </button>
@@ -180,87 +159,87 @@ export default function Sidebar({
             return (
               <button
                 key={aoi.id}
+                type="button"
+                className="pill-btn"
                 onClick={() => handleAoiClick(aoi.id)}
-                style={{
-                  fontFamily:    'var(--font-pixel)',
-                  fontSize:      '6px',
-                  letterSpacing: '0.04em',
-                  padding:       '3px 6px',
-                  border:        `1px solid ${active ? 'var(--neon-cyan)' : 'var(--bg-border)'}`,
-                  background:    active ? 'var(--neon-cyan)22' : 'transparent',
-                  color:         active ? 'var(--neon-cyan)' : 'var(--text-muted)',
-                  textShadow:    active ? 'var(--glow-cyan)' : 'none',
-                  cursor:        'pointer',
-                  transition:    'all 0.15s',
-                }}
+                aria-pressed={active}
+                aria-label={`Zona: ${aoi.label}`}
+                style={pillStyle(active, 'var(--neon-cyan)', 'var(--glow-cyan)')}
               >
                 {aoi.shortLabel}
               </button>
             );
           })}
         </div>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
+          Las zonas son aproximaciones rectangulares, no límites oficiales.
+        </p>
       </div>
 
       {/* ── Layer cards ────────────────────────────── */}
       <div className="flex flex-col gap-1.5">
         {LAYERS.map((layer, i) => {
+          const info = LAYER_INFO[layer.id];
           const isActive = activeLayers[layer.id];
+          const isSim = layer.id === 'traffic';
           return (
             <button
               key={layer.id}
+              type="button"
               onClick={() => onToggleLayer(layer.id)}
               className="terminal-panel-btn"
+              role="switch"
+              aria-checked={isActive}
+              aria-label={`Capa ${info.name}${isSim ? ' (simulación, no son datos reales)' : ''}`}
               style={{
                 borderColor: isActive ? layer.color : 'var(--bg-border)',
                 boxShadow: isActive ? `0 0 10px ${layer.color}33` : 'none',
               }}
             >
-              {/* Row number */}
               <div
+                aria-hidden
                 style={{
-                  fontFamily: 'var(--font-pixel)',
-                  fontSize: '6px',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '11px',
                   color: isActive ? layer.color : 'var(--text-muted)',
-                  marginBottom: '7px',
-                  letterSpacing: '0.04em',
+                  marginBottom: '6px',
                 }}
               >
                 {pad(i)} ──────────────────────
               </div>
 
-              {/* Main row */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span style={{ color: isActive ? layer.color : 'var(--text-muted)' }}>
-                    {layer.icon}
-                  </span>
+                  <span style={{ color: isActive ? layer.color : 'var(--text-muted)' }}>{layer.icon}</span>
                   <div>
                     <div
                       style={{
-                        fontFamily: 'var(--font-pixel)',
-                        fontSize: '7px',
-                        color: isActive ? 'var(--text-bright)' : 'var(--text-muted)',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: isActive ? 'var(--text-bright)' : 'var(--text-primary)',
                         textShadow: isActive ? `0 0 8px ${layer.color}` : 'none',
-                        letterSpacing: '0.04em',
+                        letterSpacing: '0.03em',
                       }}
                     >
-                      {layer.name}
+                      {info.name}
                     </div>
                     <div
                       style={{
                         fontFamily: 'var(--font-mono)',
-                        fontSize: '10px',
-                        color: isActive ? `${layer.color}cc` : 'var(--bg-border)',
+                        fontSize: '11px',
+                        color: isActive ? layer.color : 'var(--text-muted)',
                         marginTop: '2px',
                       }}
                     >
-                      {layer.subtitle}
+                      {info.subtitle}
                     </div>
                   </div>
                 </div>
 
                 {/* Neon toggle */}
                 <div
+                  aria-hidden
                   style={{
                     width: '36px',
                     height: '16px',
@@ -269,7 +248,7 @@ export default function Sidebar({
                     background: isActive
                       ? `linear-gradient(90deg, ${layer.color}99, ${layer.color})`
                       : 'rgba(13,43,18,0.6)',
-                    border: `1px solid ${isActive ? layer.color : 'var(--bg-border)'}`,
+                    border: `1px solid ${isActive ? layer.color : 'var(--text-muted)'}`,
                     boxShadow: isActive ? `0 0 6px ${layer.color}88` : 'none',
                     transition: 'all 0.2s',
                     flexShrink: 0,
@@ -291,20 +270,15 @@ export default function Sidebar({
                 </div>
               </div>
 
-              {/* Source line when active */}
-              {isActive && (
-                <div
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '10px',
-                    color: `${layer.color}99`,
-                    marginTop: '7px',
-                    paddingTop: '6px',
-                    borderTop: `1px solid ${layer.color}22`,
-                  }}
-                >
-                  &gt; {layer.source} · ACTIVE
+              {isSim && (
+                <div style={{ marginTop: '8px' }}>
+                  <span className="sim-badge">{SIM_BADGE}</span>
                 </div>
+              )}
+              {info.note && !isSim && (
+                <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                  {info.note}
+                </p>
               )}
             </button>
           );
@@ -314,49 +288,25 @@ export default function Sidebar({
       {/* ── Temporal filter (ndvi / soilTemp only) ─── */}
       {showTemporalFilter && (
         <div className="terminal-panel fade-in-up">
-          <div
-            style={{
-              fontFamily: 'var(--font-pixel)',
-              fontSize: '6px',
-              color: 'var(--neon-green)',
-              textShadow: 'var(--glow-green)',
-              letterSpacing: '0.04em',
-              marginBottom: '10px',
-            }}
-          >
-            &gt; TEMPORAL_FILTER
+          <div style={{ ...SECTION_TITLE, color: 'var(--neon-green)', textShadow: 'var(--glow-green)' }}>
+            &gt; PERIODO
           </div>
 
-          {/* Season pills */}
-          <div
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '9px',
-              color: 'var(--text-muted)',
-              marginBottom: '6px',
-            }}
-          >
-            ESTACION
+          <div id="seasons-label" style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+            ESTACIÓN
           </div>
-          <div className="flex gap-1 flex-wrap" style={{ marginBottom: '10px' }}>
-            {SEASON_LABELS.map(({ id, label }) => {
+          <div className="flex gap-1.5 flex-wrap" role="group" aria-labelledby="seasons-label" style={{ marginBottom: '10px' }}>
+            {SEASON_LABELS.map(({ id, label, full }) => {
               const active = seasons.includes(id);
               return (
                 <button
                   key={id}
+                  type="button"
+                  className="pill-btn"
                   onClick={() => toggleSeason(id)}
-                  style={{
-                    fontFamily:    'var(--font-pixel)',
-                    fontSize:      '6px',
-                    letterSpacing: '0.04em',
-                    padding:       '3px 6px',
-                    border:        `1px solid ${active ? 'var(--neon-green)' : 'var(--bg-border)'}`,
-                    background:    active ? 'var(--neon-green)22' : 'transparent',
-                    color:         active ? 'var(--neon-green)' : 'var(--text-muted)',
-                    textShadow:    active ? 'var(--glow-green)' : 'none',
-                    cursor:        'pointer',
-                    transition:    'all 0.15s',
-                  }}
+                  aria-pressed={active}
+                  aria-label={full}
+                  style={pillStyle(active, 'var(--neon-green)', 'var(--glow-green)')}
                 >
                   {label}
                 </button>
@@ -364,35 +314,20 @@ export default function Sidebar({
             })}
           </div>
 
-          {/* Year pills */}
-          <div
-            style={{
-              fontFamily:   'var(--font-mono)',
-              fontSize:     '9px',
-              color:        'var(--text-muted)',
-              marginBottom: '6px',
-            }}
-          >
+          <div id="years-label" style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>
             AÑO
           </div>
-          <div className="flex gap-1 flex-wrap">
+          <div className="flex gap-1.5 flex-wrap" role="group" aria-labelledby="years-label">
             {AVAILABLE_YEARS.map((y) => {
               const active = years.includes(y);
               return (
                 <button
                   key={y}
+                  type="button"
+                  className="pill-btn"
                   onClick={() => toggleYear(y)}
-                  style={{
-                    fontFamily:  'var(--font-data)',
-                    fontSize:    '11px',
-                    padding:     '2px 5px',
-                    border:      `1px solid ${active ? 'var(--neon-green)' : 'var(--bg-border)'}`,
-                    background:  active ? 'var(--neon-green)22' : 'transparent',
-                    color:       active ? 'var(--neon-green)' : 'var(--text-muted)',
-                    textShadow:  active ? 'var(--glow-green)' : 'none',
-                    cursor:      'pointer',
-                    transition:  'all 0.15s',
-                  }}
+                  aria-pressed={active}
+                  style={{ ...pillStyle(active, 'var(--neon-green)', 'var(--glow-green)'), fontFamily: 'var(--font-data)', fontSize: '16px', padding: '2px 8px' }}
                 >
                   {y}
                 </button>
@@ -405,52 +340,35 @@ export default function Sidebar({
       {/* ── Time slider (traffic only) ──────────────── */}
       {trafficActive && (
         <div className="terminal-panel fade-in-up">
-          <div className="flex items-center justify-between" style={{ marginBottom: '10px' }}>
-            <div
-              style={{
-                fontFamily: 'var(--font-pixel)',
-                fontSize: '6px',
-                color: 'var(--neon-cyan)',
-                textShadow: 'var(--glow-cyan)',
-                letterSpacing: '0.04em',
-              }}
-            >
+          <div className="flex items-center justify-between" style={{ marginBottom: '8px' }}>
+            <label htmlFor="hour-slider" style={{ ...SECTION_TITLE, marginBottom: 0, color: 'var(--neon-cyan)', textShadow: 'var(--glow-cyan)' }}>
               HORA_DEL_DIA
-            </div>
-            <span
-              style={{
-                fontFamily: 'var(--font-data)',
-                fontSize: '18px',
-                color: 'var(--neon-cyan)',
-                textShadow: 'var(--glow-cyan)',
-              }}
-            >
+            </label>
+            <span style={{ fontFamily: 'var(--font-data)', fontSize: '22px', color: 'var(--neon-cyan)', textShadow: 'var(--glow-cyan)' }}>
               {formatHour(hour)}
             </span>
           </div>
+          <div style={{ marginBottom: '8px' }}>
+            <span className="sim-badge">{SIM_BADGE}</span>
+          </div>
 
           <input
+            id="hour-slider"
             type="range"
             min={0}
             max={23}
             value={hour}
+            aria-valuetext={formatHour(hour)}
             onChange={(e) => onHourChange(Number(e.target.value))}
             className="neon-slider"
           />
 
           <div
+            aria-hidden
             className="flex justify-between mt-2"
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '9px',
-              color: 'var(--text-muted)',
-            }}
+            style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}
           >
-            <span>00:00</span>
-            <span>06:00</span>
-            <span>12:00</span>
-            <span>18:00</span>
-            <span>23:00</span>
+            <span>00</span><span>06</span><span>12</span><span>18</span><span>23</span>
           </div>
 
           <TrafficBar hour={hour} />
@@ -458,18 +376,8 @@ export default function Sidebar({
       )}
 
       {/* ── Footer ─────────────────────────────────── */}
-      <div
-        className="terminal-panel mt-auto"
-        style={{ borderColor: 'transparent' }}
-      >
-        <p
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '9px',
-            color: 'var(--text-muted)',
-            textAlign: 'center',
-          }}
-        >
+      <div className="terminal-panel mt-auto" style={{ borderColor: 'transparent' }}>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>
           © 2025 ASUNGREEN · GEE/OSM
         </p>
       </div>
@@ -481,43 +389,20 @@ function TrafficBar({ hour }: { hour: number }) {
   const density = TRAFFIC_BY_HOUR[hour] ?? 0;
   const isPeak  = density >= 0.85;
   const isHigh  = density >= 0.6;
-  const color   = isPeak
-    ? 'var(--neon-magenta)'
-    : isHigh
-    ? 'var(--neon-yellow)'
-    : 'var(--neon-cyan)';
+  const color   = isPeak ? 'var(--neon-magenta)' : isHigh ? 'var(--neon-yellow)' : 'var(--neon-cyan)';
   const label   = isPeak ? 'PICO' : isHigh ? 'ALTO' : 'NORMAL';
 
   return (
     <div style={{ marginTop: '10px' }}>
       <div className="flex items-center justify-between" style={{ marginBottom: '5px' }}>
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '9px',
-            color: 'var(--text-muted)',
-          }}
-        >
-          DENSIDAD:
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-muted)' }}>
+          DENSIDAD SIMULADA:
         </span>
-        <span
-          style={{
-            fontFamily: 'var(--font-pixel)',
-            fontSize: '6px',
-            color,
-            textShadow: `0 0 8px ${color}`,
-          }}
-        >
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700, color, textShadow: `0 0 8px ${color}` }}>
           {label}
         </span>
       </div>
-      <div
-        style={{
-          height: '3px',
-          background: 'var(--bg-border)',
-          borderRadius: '0',
-        }}
-      >
+      <div style={{ height: '4px', background: '#1d4a26' }}>
         <div
           style={{
             height: '100%',

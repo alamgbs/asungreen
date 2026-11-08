@@ -1,443 +1,366 @@
 /**
  * POST /api/gee-map
  * Body: { layer: 'ndvi' | 'soilTemp', years?: number[], seasons?: string[], aoiId?: string }
- * Returns: { tileBaseUrl: string, token: string, min: number, max: number }
+ * Returns: { tileBaseUrl: string, min: number, max: number, mean?: number, masked: boolean }
  *
- * Builds a GEE median composite from Sentinel-2 (NDVI 10m) or
- * Landsat 8+9 merged (LST 30m), filtered by Southern Hemisphere seasons.
+ * 'soilTemp' is the legacy LayerType id; the layer is actually land surface
+ * temperature (LST, °C) from Landsat 8+9. NDVI comes from Sentinel-2.
+ * tileBaseUrl is same-origin (/api/gee-tiles/<mapId>); the GEE token stays server-side.
+ * min/max are a FIXED scale shared by all AOIs (see LAYER_VALUE_RANGE).
  */
 
-import { createSign } from 'crypto';
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
 import { NextResponse } from 'next/server';
-import { AOIS } from '@/lib/aois';
+import { AOIS, type Aoi } from '@/lib/aois';
+import { LAYER_VALUE_RANGE } from '@/lib/constants';
+import { GEE_V1, loadServiceAccount, getAccessToken, clientIp, rateLimit } from '@/app/api/_lib/gee';
 
-const GEE_V1 = 'https://earthengine.googleapis.com/v1';
+type Layer = 'ndvi' | 'soilTemp';
+type Hemisphere = 'S' | 'N';
 
-interface ServiceAccount {
-  project_id: string;
-  client_email: string;
-  private_key: string;
-}
-
-function loadServiceAccount(): ServiceAccount {
-  if (process.env.GEE_SA_JSON) {
-    return JSON.parse(process.env.GEE_SA_JSON) as ServiceAccount;
-  }
-  const devPath = join(process.cwd(), 'service-account.json');
-  if (existsSync(devPath)) {
-    return JSON.parse(readFileSync(devPath, 'utf8')) as ServiceAccount;
-  }
-  throw new Error('GEE service account not configured. Set GEE_SA_JSON or add service-account.json.');
-}
-
-function b64url(buf: string | Buffer): string {
-  return Buffer.from(buf)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
-}
-
-async function getAccessToken(sa: ServiceAccount): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  const header  = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
-  const payload = b64url(JSON.stringify({
-    iss:   sa.client_email,
-    scope: 'https://www.googleapis.com/auth/earthengine',
-    aud:   'https://oauth2.googleapis.com/token',
-    iat:   now,
-    exp:   now + 3600,
-  }));
-  const unsigned = `${header}.${payload}`;
-  const sign = createSign('RSA-SHA256');
-  sign.update(unsigned);
-  const sig = b64url(sign.sign(sa.private_key));
-  const jwt = `${unsigned}.${sig}`;
-
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: jwt,
-    }),
-  });
-  const data = await res.json() as { access_token?: string; error?: string };
-  if (!data.access_token) throw new Error(`OAuth2 failed: ${data.error}`);
-  return data.access_token;
-}
-
-// ── Seasonal date ranges (Southern Hemisphere) ────────────────────────────
-// Returns [startISO, endISO) exclusive end.
-// Summer spans year boundary: year Y → Dec Y – Feb Y+1.
-const SEASON_OFFSETS: Record<string, (y: number) => [string, string]> = {
-  spring: (y) => [`${y}-09-01`, `${y}-12-01`],
-  summer: (y) => [`${y}-12-01`, `${y + 1}-03-01`],
-  autumn: (y) => [`${y}-03-01`, `${y}-06-01`],
-  winter: (y) => [`${y}-06-01`, `${y}-09-01`],
+// ── Seasons ───────────────────────────────────────────────────────────────
+// Returns [startISO, endISO) exclusive end. The winter/summer season that
+// wraps the new year is anchored on the year it STARTS in (Dec Y – Feb Y+1).
+// Tropical AOIs (Panamá ~9°N, CDMX ~19°N) use the northern meteorological
+// seasons: the UI only exposes 4 seasons, so we do not map wet/dry seasons.
+const SEASON_OFFSETS: Record<Hemisphere, Record<string, (y: number) => [string, string]>> = {
+  S: {
+    spring: (y) => [`${y}-09-01`, `${y}-12-01`],
+    summer: (y) => [`${y}-12-01`, `${y + 1}-03-01`],
+    autumn: (y) => [`${y}-03-01`, `${y}-06-01`],
+    winter: (y) => [`${y}-06-01`, `${y}-09-01`],
+  },
+  N: {
+    spring: (y) => [`${y}-03-01`, `${y}-06-01`],
+    summer: (y) => [`${y}-06-01`, `${y}-09-01`],
+    autumn: (y) => [`${y}-09-01`, `${y}-12-01`],
+    winter: (y) => [`${y}-12-01`, `${y + 1}-03-01`],
+  },
 };
+const VALID_SEASONS = new Set(Object.keys(SEASON_OFFSETS.S));
 
-function currentSeason(): string {
+function currentSeason(h: Hemisphere): string {
   const m = new Date().getMonth() + 1;
-  if (m >= 9 && m <= 11) return 'spring';
-  if (m === 12 || m <= 2) return 'summer';
-  if (m >= 3 && m <= 5) return 'autumn';
+  const spring = h === 'S' ? [9, 10, 11] : [3, 4, 5];
+  const summer = h === 'S' ? [12, 1, 2] : [6, 7, 8];
+  const autumn = h === 'S' ? [3, 4, 5] : [9, 10, 11];
+  if (spring.includes(m)) return 'spring';
+  if (summer.includes(m)) return 'summer';
+  if (autumn.includes(m)) return 'autumn';
   return 'winter';
 }
 
-// ── GEE expression value-node helpers ────────────────────────────────────
+// ── Data availability ─────────────────────────────────────────────────────
+// Sentinel-2 SR Harmonized (+ Cloud Score+) global from 2017; Landsat 8 from
+// Apr 2013 (LC09 from late 2021 is merged but not required).
+const DATA_START: Record<Layer, { year: number; iso: string; label: string }> = {
+  ndvi:     { year: 2017, iso: '2017-01-01', label: 'Sentinel-2 (desde 2017)' },
+  soilTemp: { year: 2013, iso: '2013-04-11', label: 'Landsat 8 (desde 2013)' },
+};
+
+/** Keeps only [year, season] ranges that overlap the dataset and are not in the future. */
+function validRanges(layer: Layer, h: Hemisphere, years: number[], seasons: string[]) {
+  const now = Date.now();
+  const dataStart = new Date(DATA_START[layer].iso).getTime();
+  const out: [string, string][] = [];
+  for (const y of years) for (const s of seasons) {
+    const [a, b] = SEASON_OFFSETS[h][s](y);
+    if (new Date(b).getTime() > dataStart && new Date(a).getTime() <= now) out.push([a, b]);
+  }
+  return out;
+}
+
+// ── GEE expression value-node helpers ─────────────────────────────────────
 type GeeValue = {
   constantValue?: unknown;
+  valueReference?: string;
+  argumentReference?: string;
   functionInvocationValue?: { functionName: string; arguments: Record<string, GeeValue> };
+  functionDefinitionValue?: { argumentNames: string[]; body: string };
   arrayValue?: { values: GeeValue[] };
   geoJsonGeometry?: { type: string; coordinates: unknown };
 };
-
 interface GeeExpression { result: string; values: Record<string, GeeValue> }
 
-function constant(v: unknown): GeeValue {
-  return { constantValue: v };
+const constant = (v: unknown): GeeValue => ({ constantValue: v });
+const invoke = (fn: string, args: Record<string, GeeValue>): GeeValue =>
+  ({ functionInvocationValue: { functionName: fn, arguments: args } });
+const arr = (values: GeeValue[]): GeeValue => ({ arrayValue: { values } });
+const imgConst = (v: number): GeeValue => invoke('Image.constant', { value: constant(v) });
+
+/** Builds a Collection.map(img => body(img)) node. The body is stored as a named value in `values`. */
+function mapCollection(
+  values: Record<string, GeeValue>,
+  name: string,
+  collection: GeeValue,
+  body: (img: GeeValue) => GeeValue,
+): GeeValue {
+  values[name] = body({ argumentReference: `${name}_arg` });
+  return invoke('Collection.map', {
+    collection,
+    baseAlgorithm: { functionDefinitionValue: { argumentNames: [`${name}_arg`], body: name } },
+  });
 }
 
-function invoke(fn: string, args: Record<string, GeeValue>): GeeValue {
-  return { functionInvocationValue: { functionName: fn, arguments: args } };
+function buildDateFilter(ranges: [string, string][]): GeeValue {
+  const nodes = ranges.map(([start, end]) =>
+    invoke('Filter.and', {
+      filters: arr([
+        invoke('Filter.gte', { leftField: constant('system:time_start'), rightValue: constant(new Date(start).getTime()) }),
+        invoke('Filter.lt',  { leftField: constant('system:time_start'), rightValue: constant(new Date(end).getTime()) }),
+      ]),
+    }));
+  return nodes.length === 1 ? nodes[0] : invoke('Filter.or', { filters: arr(nodes) });
 }
 
-function arr(values: GeeValue[]): GeeValue {
-  return { arrayValue: { values } };
-}
-
-/** Wraps a GeoJSON geometry object as a GEE geoJsonGeometry value node. */
-function buildGeometry(geojson: { type: string; coordinates: unknown }): GeeValue {
-  return { geoJsonGeometry: geojson };
-}
+const filterColl = (collection: GeeValue, filter: GeeValue) => invoke('Collection.filter', { collection, filter });
+const lt = (field: string, v: number) => invoke('Filter.lt', { leftField: constant(field), rightValue: constant(v) });
+const median = (collection: GeeValue) => invoke('ImageCollection.reduce', { collection, reducer: invoke('Reducer.median', {}) });
 
 /**
- * Calls GEE value:compute to evaluate a reduceRegion expression.
- * Returns the raw dictionary values from GEE (each entry is a GeeValue node).
+ * Pre-visualize single-band composite.
+ * masked=true  → per-pixel cloud masking (needs Collection.map / linkCollection;
+ *                unverifiable offline, so the route probes it and falls back).
+ * masked=false → scene-level CLOUDY_PIXEL_PERCENTAGE / CLOUD_COVER filter only.
  */
-async function computeStats(
-  token:      string,
-  projectId:  string,
-  expression: GeeExpression,
-): Promise<Record<string, { constantValue?: number }>> {
-  const res = await fetch(`${GEE_V1}/projects/${projectId}/value:compute`, {
-    method: 'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      Authorization:   `Bearer ${token}`,
-    },
-    body: JSON.stringify({ expression }),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`GEE value:compute error: ${text}`);
+function buildComposite(
+  layer: Layer, ranges: [string, string][], masked: boolean, values: Record<string, GeeValue>,
+): { image: GeeValue; band: string } {
+  const dateFilter = buildDateFilter(ranges);
+
+  if (layer === 'ndvi') {
+    let coll = filterColl(
+      filterColl(invoke('ImageCollection.load', { id: constant('COPERNICUS/S2_SR_HARMONIZED') }), dateFilter),
+      lt('CLOUDY_PIXEL_PERCENTAGE', masked ? 70 : 20), // pixel mask does the real work when masked
+    );
+    if (!masked) {
+      return {
+        image: invoke('Image.normalizedDifference', { input: median(coll), bandNames: constant(['B8_median', 'B4_median']) }),
+        band: 'nd',
+      };
+    }
+    // Cloud Score+ (cs_cdf ≥ 0.6) joined by system:index.
+    coll = invoke('ImageCollection.linkCollection', {
+      input: coll,
+      imageCollection: invoke('ImageCollection.load', { id: constant('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED') }),
+      linkedBands: constant(['cs_cdf']),
+    });
+    const ndviColl = mapCollection(values, 'ndviMask', coll, (img) =>
+      invoke('Image.normalizedDifference', {
+        input: invoke('Image.updateMask', {
+          image: img,
+          mask: invoke('Image.gte', {
+            image1: invoke('Image.select', { input: img, bandSelectors: constant(['cs_cdf']) }),
+            image2: imgConst(0.6),
+          }),
+        }),
+        bandNames: constant(['B8', 'B4']),
+      }));
+    return { image: median(ndviColl), band: 'nd_median' };
   }
+
+  // LST: Landsat 8+9 Collection 2 Level-2, ST_B10 → °C
+  let coll = filterColl(
+    filterColl(
+      invoke('ImageCollection.merge', {
+        collection1: invoke('ImageCollection.load', { id: constant('LANDSAT/LC08/C02/T1_L2') }),
+        collection2: invoke('ImageCollection.load', { id: constant('LANDSAT/LC09/C02/T1_L2') }),
+      }),
+      dateFilter,
+    ),
+    lt('CLOUD_COVER', masked ? 60 : 30),
+  );
+  if (masked) {
+    // QA_PIXEL bits 1 (dilated cloud), 2 (cirrus), 3 (cloud), 4 (cloud shadow) → mask 0b11110 = 30.
+    // NOTE: ImageCollection.select is NOT supported by value:compute (see git history), so
+    // band selection happens per image inside the map using Image.select.
+    coll = mapCollection(values, 'lstMask', coll, (img) =>
+      invoke('Image.updateMask', {
+        image: invoke('Image.select', { input: img, bandSelectors: constant(['ST_B10']) }),
+        mask: invoke('Image.eq', {
+          image1: invoke('Image.bitwiseAnd', {
+            image1: invoke('Image.select', { input: img, bandSelectors: constant(['QA_PIXEL']) }),
+            image2: imgConst(30),
+          }),
+          image2: imgConst(0),
+        }),
+      }));
+  }
+  // DN → °C is linear (scale 0.00341802, offset 149 K), so it commutes with the median.
+  const dn = invoke('Image.select', { input: median(coll), bandSelectors: constant(['ST_B10_median']) });
+  const celsius = invoke('Image.subtract', {
+    image1: invoke('Image.add', {
+      image1: invoke('Image.multiply', { image1: dn, image2: imgConst(0.00341802) }),
+      image2: imgConst(149.0),
+    }),
+    image2: imgConst(273.15),
+  });
+  return { image: celsius, band: 'ST_B10_median' };
+}
+
+// ── GEE calls ─────────────────────────────────────────────────────────────
+const post = (url: string, token: string, body: unknown) =>
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+
+class GeeError extends Error { constructor(msg: string, readonly status: number) { super(msg); } }
+
+/** reduceRegion(mean) over the clipped composite. Doubles as a validity probe of the expression. */
+async function computeMean(
+  token: string, projectId: string, image: GeeValue, geometry: GeeValue, values: Record<string, GeeValue>,
+): Promise<number | undefined> {
+  const expression: GeeExpression = {
+    result: 'result',
+    values: {
+      ...values,
+      result: invoke('Image.reduceRegion', {
+        input: invoke('Image.clip', { input: image, geometry }), // reduceRegion takes 'input' (verified by earlier working code)
+        reducer: invoke('Reducer.mean', {}),
+        geometry,
+        scale: constant(1000),
+        bestEffort: constant(true),
+      }),
+    },
+  };
+  const res = await post(`${GEE_V1}/projects/${projectId}/value:compute`, token, { expression });
+  if (!res.ok) throw new GeeError(`GEE value:compute error: ${await res.text()}`, res.status);
   const data = await res.json() as {
     result: string;
-    values: Record<string, {
-      dictionaryValue?: { values: Record<string, { constantValue?: number }> };
-    }>;
+    values: Record<string, { dictionaryValue?: { values: Record<string, { constantValue?: number }> } }>;
   };
-  const topVal = data.values?.[data.result];
-  if (!topVal) {
-    throw new Error(`value:compute: result key "${data.result}" not found in response`);
-  }
-  if (!topVal.dictionaryValue) {
-    throw new Error(`value:compute: expected dictionaryValue, got: ${JSON.stringify(topVal)}`);
-  }
-  return topVal.dictionaryValue.values;
+  const dict = data.values?.[data.result]?.dictionaryValue?.values ?? {};
+  const first = Object.values(dict)[0]?.constantValue; // single-band image → single key
+  return typeof first === 'number' ? first : undefined;
 }
 
-/** Extracts a number from a GEE constantValue node. Throws if not found. */
-function extractNumber(v: { constantValue?: number } | undefined, key: string): number {
-  if (v && typeof v.constantValue === 'number') return v.constantValue;
-  throw new Error(`value:compute: could not read key "${key}": ${JSON.stringify(v)}`);
-}
+interface MapResult { mapId: string; min: number; max: number; mean?: number; masked: boolean }
 
-// ── LST DN → Celsius conversion ──────────────────────────────────────────
-// Landsat Collection 2 Level-2 ST_B10 scale factor: 0.00341802, offset: 149.0
-const lstDnToCelsius = (dn: number): number => dn * 0.00341802 + 149.0 - 273.15;
+async function createMap(
+  token: string, projectId: string, layer: Layer, ranges: [string, string][], aoi: Aoi | undefined, masked: boolean,
+): Promise<MapResult> {
+  const values: Record<string, GeeValue> = {};
+  const { image, band } = buildComposite(layer, ranges, masked, values);
+  const range = LAYER_VALUE_RANGE[layer];
 
-// ── Visualization min/max constants ──────────────────────────────────────
-// VIZ_DEFAULTS: raw values passed to GEE Image.visualize
-// DISPLAY_DEFAULTS: human-readable values returned in the API response
-const VIZ_DEFAULTS = {
-  ndvi:     { min: -0.2,  max: 0.8   },
-  soilTemp: { min: 40713, max: 50947 }, // raw ST_B10 DN
-} as const;
+  // Probe region: the AOI, or a small box in Asunción when no AOI is active.
+  const geometry: GeeValue | undefined = aoi ? { geoJsonGeometry: aoi.geometry } : undefined;
+  const probeGeom: GeeValue = geometry ?? {
+    geoJsonGeometry: { type: 'Polygon', coordinates: [[[-57.6, -25.35], [-57.5, -25.35], [-57.5, -25.25], [-57.6, -25.25], [-57.6, -25.35]]] },
+  };
+  // Throws if any function in the (masked) expression is unsupported → caller falls back.
+  const mean = await computeMean(token, projectId, image, probeGeom, values);
 
-const DISPLAY_DEFAULTS = {
-  ndvi:     { min: -0.2,  max: 0.8   },
-  soilTemp: { min: lstDnToCelsius(40713), max: lstDnToCelsius(50947) }, // °C ≈ 14.9 / 49.9
-} as const;
-
-// Builds Filter.and(gte, lt) for one date range, or Filter.or of N ranges.
-// GEE REST API: Filter.and and Filter.or take a 'filters' arrayValue argument.
-function buildDateFilter(years: number[], seasons: string[]): GeeValue {
-  const ranges: GeeValue[] = [];
-
-  for (const year of years) {
-    for (const season of seasons) {
-      const fn = SEASON_OFFSETS[season];
-      if (!fn) continue;
-      const [start, end] = fn(year);
-      ranges.push(
-        invoke('Filter.and', {
-          filters: arr([
-            invoke('Filter.gte', {
-              leftField:  constant('system:time_start'),
-              rightValue: constant(new Date(start).getTime()),
-            }),
-            invoke('Filter.lt', {
-              leftField:  constant('system:time_start'),
-              rightValue: constant(new Date(end).getTime()),
-            }),
-          ]),
-        })
-      );
-    }
-  }
-
-  if (ranges.length === 0) {
-    throw new Error('buildDateFilter: no valid year/season combinations');
-  }
-
-  if (ranges.length === 1) return ranges[0];
-
-  return invoke('Filter.or', { filters: arr(ranges) });
-}
-
-// ── NDVI: Sentinel-2 SR Harmonized, 10m ──────────────────────────────────
-// Returns the pre-visualize NDVI image node (normalizedDifference result).
-function buildNdviImage(years: number[], seasons: string[]): GeeValue {
-  const dateFilter  = buildDateFilter(years, seasons);
-  const cloudFilter = invoke('Filter.lt', {
-    leftField:  constant('CLOUDY_PIXEL_PERCENTAGE'),
-    rightValue: constant(20),
-  });
-
-  const filtered = invoke('Collection.filter', {
-    collection: invoke('Collection.filter', {
-      collection: invoke('ImageCollection.load', {
-        id: constant('COPERNICUS/S2_SR_HARMONIZED'),
-      }),
-      filter: dateFilter,
-    }),
-    filter: cloudFilter,
-  });
-
-  const median = invoke('ImageCollection.reduce', {
-    collection: filtered,
-    reducer:    invoke('Reducer.median', {}),
-  });
-
-  // GEE REST API: Image.normalizedDifference uses 'input' (not 'image').
-  return invoke('Image.normalizedDifference', {
-    input:     median,
-    bandNames: constant(['B8_median', 'B4_median']),
-  });
-}
-
-// Wraps NDVI image with optional clip + visualize.
-// geometry: if provided, clips the image to that AOI before visualizing.
-function visualizeNdvi(
-  image:     GeeValue,
-  min:       number,
-  max:       number,
-  geometry?: GeeValue,
-): GeeExpression {
-  const src = geometry
-    ? invoke('Image.clip', { input: image, geometry })
-    : image;
-  return {
+  const src = geometry ? invoke('Image.clip', { input: image, geometry }) : image;
+  const palette = layer === 'ndvi'
+    ? ['ff2d78', 'ffe600', '00ff88', '00a855', '004d22']
+    : ['001aff', '00e5ff', 'ffe600', 'ff7c00', 'ff2d78'];
+  const expression: GeeExpression = {
     result: 'result',
     values: {
+      ...values,
       result: invoke('Image.visualize', {
-        image:   src,
-        min:     constant(min),
-        max:     constant(max),
-        palette: constant(['ff2d78', 'ffe600', '00ff88', '00a855', '004d22']),
+        image: src, bands: constant([band]), min: constant(range.min), max: constant(range.max), palette: constant(palette),
       }),
     },
   };
+  const res = await post(`${GEE_V1}/projects/${projectId}/maps`, token, { expression, fileFormat: 'PNG' });
+  if (!res.ok) throw new GeeError(`GEE error: ${await res.text()}`, res.status);
+  const { name } = await res.json() as { name: string }; // projects/<p>/maps/<id>
+  return { mapId: name.split('/').pop()!, min: range.min, max: range.max, mean: aoi ? mean : undefined, masked };
 }
 
-// ── LST: Landsat 8+9 Collection 2 Level-2, 30m ───────────────────────────
-// Returns the pre-visualize LST median composite image node.
-function buildLstImage(years: number[], seasons: string[]): GeeValue {
-  const dateFilter  = buildDateFilter(years, seasons);
-  const cloudFilter = invoke('Filter.lt', {
-    leftField:  constant('CLOUD_COVER'),
-    rightValue: constant(30),
-  });
+// ── Cache (in-memory, TTL) + in-flight dedupe ─────────────────────────────
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // GEE map ids stay valid for many hours
+const CACHE_MAX = 300;
+const cache = new Map<string, { exp: number; value: MapResult }>();
+const inflight = new Map<string, Promise<MapResult>>();
 
-  const merged = invoke('ImageCollection.merge', {
-    collection1: invoke('ImageCollection.load', { id: constant('LANDSAT/LC08/C02/T1_L2') }),
-    collection2: invoke('ImageCollection.load', { id: constant('LANDSAT/LC09/C02/T1_L2') }),
-  });
-
-  const filtered = invoke('Collection.filter', {
-    collection: invoke('Collection.filter', {
-      collection: merged,
-      filter: dateFilter,
-    }),
-    filter: cloudFilter,
-  });
-
-  return invoke('ImageCollection.reduce', {
-    collection: filtered,
-    reducer:    invoke('Reducer.median', {}),
-  });
+function cacheGet(key: string): MapResult | undefined {
+  const hit = cache.get(key);
+  if (!hit) return undefined;
+  if (hit.exp < Date.now()) { cache.delete(key); return undefined; }
+  return hit.value;
 }
-
-// Wraps LST image with optional clip + visualize.
-// min/max are raw ST_B10 DN values (not °C) for GEE Image.visualize.
-function visualizeLst(
-  image:     GeeValue,
-  min:       number,
-  max:       number,
-  geometry?: GeeValue,
-): GeeExpression {
-  const src = geometry
-    ? invoke('Image.clip', { input: image, geometry })
-    : image;
-  return {
-    result: 'result',
-    values: {
-      result: invoke('Image.visualize', {
-        image:   src,
-        bands:   constant(['ST_B10_median']),
-        min:     constant(min),
-        max:     constant(max),
-        palette: constant(['001aff', '00e5ff', 'ffe600', 'ff7c00', 'ff2d78']),
-      }),
-    },
-  };
+function cacheSet(key: string, value: MapResult) {
+  if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value!); // oldest insertion
+  cache.set(key, { exp: Date.now() + CACHE_TTL_MS, value });
 }
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
-      layer:    'ndvi' | 'soilTemp';
-      years?:   number[];
-      seasons?: string[];
-      aoiId?:   string;
+      layer: Layer; years?: number[]; seasons?: string[]; aoiId?: string;
     };
-
-    const { layer } = body;
+    const { layer, aoiId } = body;
     if (layer !== 'ndvi' && layer !== 'soilTemp') {
-      return NextResponse.json({ error: 'Invalid layer' }, { status: 400 });
+      return NextResponse.json({ error: 'Capa inválida' }, { status: 400 });
     }
+
+    const aoi = aoiId !== undefined ? AOIS.find((a) => a.id === aoiId) : undefined;
+    if (aoiId !== undefined && !aoi) {
+      return NextResponse.json({ error: `aoiId desconocido: ${aoiId}` }, { status: 400 });
+    }
+    // Without an AOI (global view) we keep the project's home hemisphere (Paraguay).
+    const hemisphere: Hemisphere = aoi?.hemisphere ?? 'S';
 
     const years   = body.years?.length   ? body.years   : [new Date().getFullYear()];
-    const seasons = body.seasons?.length ? body.seasons : [currentSeason()];
-
-    const VALID_SEASONS = new Set(Object.keys(SEASON_OFFSETS));
+    const seasons = body.seasons?.length ? body.seasons : [currentSeason(hemisphere)];
     for (const s of seasons) {
-      if (!VALID_SEASONS.has(s)) {
-        return NextResponse.json({ error: `Invalid season: ${s}` }, { status: 400 });
-      }
+      if (!VALID_SEASONS.has(s)) return NextResponse.json({ error: `Estación inválida: ${s}` }, { status: 400 });
     }
-
     for (const y of years) {
       if (!Number.isInteger(y) || y < 1984 || y > new Date().getFullYear()) {
-        return NextResponse.json({ error: `Invalid year: ${y}` }, { status: 400 });
+        return NextResponse.json({ error: `Año inválido: ${y}` }, { status: 400 });
       }
     }
 
-    const sa    = loadServiceAccount();
-    const token = await getAccessToken(sa);
-
-    const { aoiId } = body;
-    const aoi = aoiId !== undefined ? AOIS.find((a) => a.id === aoiId) : undefined;
-
-    if (aoiId !== undefined && !aoi) {
-      return NextResponse.json({ error: `Unknown aoiId: ${aoiId}` }, { status: 400 });
+    const ranges = validRanges(layer, hemisphere, years, seasons);
+    if (ranges.length === 0) {
+      return NextResponse.json({
+        error: `Sin datos para el rango pedido: ${DATA_START[layer].label}. ` +
+          `Elegí años desde ${DATA_START[layer].year} que ya hayan ocurrido.`,
+      }, { status: 400 });
     }
 
-    const image = layer === 'ndvi'
-      ? buildNdviImage(years, seasons)
-      : buildLstImage(years, seasons);
+    const key = `${layer}|${[...years].sort().join(',')}|${[...seasons].sort().join(',')}|${aoiId ?? 'global'}`;
+    const headers = { 'Cache-Control': 'private, max-age=3000' };
+    const respond = (r: MapResult) => NextResponse.json({
+      tileBaseUrl: `/api/gee-tiles/${r.mapId}`, // same-origin proxy; no token exposed
+      min: r.min, max: r.max, ...(r.mean !== undefined ? { mean: r.mean } : {}), masked: r.masked,
+    }, { headers });
 
-    let vizMin: number;
-    let vizMax: number;
-    let displayMin: number;
-    let displayMax: number;
-    let geometry: GeeValue | undefined;
+    const cached = cacheGet(key);
+    if (cached) return respond(cached);
 
-    if (aoi) {
-      geometry = buildGeometry(aoi.geometry);
-
-      // Build the stats expression: reduceRegion over the clipped image
-      const statsExpression: GeeExpression = {
-        result: 'result',
-        values: {
-          result: invoke('Image.reduceRegion', {
-            input: invoke('Image.clip', { input: image, geometry }),
-            reducer: invoke('Reducer.percentile', {
-              percentiles: arr([constant(5), constant(95)]),
-            }),
-            geometry,
-            scale:      constant(1000),
-            bestEffort: constant(true),
-          }),
-        },
-      };
-
-      const statsDict = await computeStats(token, sa.project_id, statsExpression);
-
-      if (layer === 'ndvi') {
-        // Band name from Image.normalizedDifference is 'nd'
-        const p5  = extractNumber(statsDict['nd_p5'],  'nd_p5');
-        const p95 = extractNumber(statsDict['nd_p95'], 'nd_p95');
-        vizMin = p5;  vizMax = p95;
-        displayMin = p5; displayMax = p95;
-      } else {
-        // Band name from ImageCollection.reduce(Reducer.median) is 'ST_B10_median'
-        const p5  = extractNumber(statsDict['ST_B10_median_p5'],  'ST_B10_median_p5');
-        const p95 = extractNumber(statsDict['ST_B10_median_p95'], 'ST_B10_median_p95');
-        vizMin = p5;  vizMax = p95;
-        displayMin = lstDnToCelsius(p5);
-        displayMax = lstDnToCelsius(p95);
-      }
-    } else {
-      vizMin     = VIZ_DEFAULTS[layer].min;
-      vizMax     = VIZ_DEFAULTS[layer].max;
-      displayMin = DISPLAY_DEFAULTS[layer].min;
-      displayMax = DISPLAY_DEFAULTS[layer].max;
+    // Only uncached requests cost GEE quota, so only they count against the limit.
+    if (!inflight.has(key) && !rateLimit(`map:${clientIp(request)}`, 20, 60_000)) {
+      return NextResponse.json({ error: 'Demasiadas solicitudes, esperá un momento.' }, { status: 429 });
     }
 
-    const expression = layer === 'ndvi'
-      ? visualizeNdvi(image, vizMin, vizMax, geometry)
-      : visualizeLst(image, vizMin, vizMax, geometry);
-
-    // Tile map creation uses vizMin/vizMax computed above — must run after stats.
-    const res = await fetch(`${GEE_V1}/projects/${sa.project_id}/maps`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ expression, fileFormat: 'PNG' }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      return NextResponse.json({ error: `GEE error: ${text}` }, { status: 502 });
+    let pending = inflight.get(key);
+    if (!pending) {
+      pending = (async () => {
+        const sa = loadServiceAccount();
+        const token = await getAccessToken(sa);
+        let result: MapResult;
+        try {
+          result = await createMap(token, sa.project_id, layer, ranges, aoi, true);
+        } catch (e) {
+          // Masked expression rejected (unsupported function in value:compute) → scene-level filter only.
+          if (!(e instanceof GeeError) || e.status >= 500 || e.status === 429) throw e;
+          console.warn('[gee-map] pixel masking failed, falling back to scene filter:', e.message.slice(0, 300));
+          result = await createMap(token, sa.project_id, layer, ranges, aoi, false);
+        }
+        cacheSet(key, result);
+        return result;
+      })().finally(() => inflight.delete(key));
+      inflight.set(key, pending);
     }
-
-    const data = (await res.json()) as { name: string };
-    const tileBaseUrl = `${GEE_V1}/${data.name}/tiles`;
-
-    return NextResponse.json(
-      { tileBaseUrl, token, min: displayMin, max: displayMax },
-      { headers: { 'Cache-Control': 'private, max-age=3000' } },
-    );
+    return respond(await pending);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Error desconocido';
+    return NextResponse.json({ error: msg }, { status: err instanceof GeeError ? 502 : 500 });
   }
 }

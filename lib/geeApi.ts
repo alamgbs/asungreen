@@ -1,6 +1,7 @@
 /**
  * GEE tile URL client.
- * Calls /api/gee-map (server-side proxy) to get a tile base URL + token + stats.
+ * Calls /api/gee-map (server-side proxy) to get a same-origin tile base URL + stats.
+ * The GEE access token never reaches the browser (tiles go through /api/gee-tiles).
  * Cache key includes layer + years + seasons + aoiId.
  */
 
@@ -8,14 +9,16 @@ export interface GeeLayerResult {
   tileBaseUrl: string;
   min:         number;
   max:         number;
+  /** Zone mean (°C for LST, index for NDVI); only present when an AOI is active. */
+  mean?:       number;
 }
 
 /** Populated by getGeeTileUrl(). Read by MapView.transformRequest. */
 export const geeTileUrlCache: Partial<Record<'ndvi' | 'soilTemp', string>> = {};
 
 /**
- * Per-session token cache — access tokens from /api/gee-map.
- * Tiles are fetched with this token in the Authorization header.
+ * @deprecated No longer populated: tiles are proxied server-side, so no token
+ * reaches the browser. Kept only so existing imports keep compiling.
  */
 export const geeTileTokenCache: Partial<Record<'ndvi' | 'soilTemp', string>> = {};
 
@@ -59,14 +62,13 @@ export async function getGeeTileUrl(
     throw new Error(`GEE proxy error: ${data.error ?? res.status}`);
   }
 
-  const data = (await res.json()) as { tileBaseUrl: string; token: string; min: number; max: number };
-  const result: GeeLayerResult = { tileBaseUrl: data.tileBaseUrl, min: data.min, max: data.max };
+  const data = (await res.json()) as { tileBaseUrl: string; min: number; max: number; mean?: number };
+  const result: GeeLayerResult = { tileBaseUrl: data.tileBaseUrl, min: data.min, max: data.max, mean: data.mean };
 
   // Only update the tile URL/token caches if this is still the latest request for this layer.
   // A concurrent fetch with a newer AOI selection may have already resolved.
   if (geeRequestId[layer] === myId) {
-    geeTileUrlCache[layer]   = data.tileBaseUrl;
-    geeTileTokenCache[layer] = data.token;
+    geeTileUrlCache[layer] = data.tileBaseUrl;
   }
   geeParamCache[layer]  = key;
   geeResultCache[layer] = result;

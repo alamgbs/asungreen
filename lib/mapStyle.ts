@@ -55,7 +55,7 @@ export function applyNeonTheme(map: maplibregl.Map): void {
       }
 
       if (layer.type === 'symbol') {
-        map.setPaintProperty(id, 'text-color', '#2d5c35');
+        map.setPaintProperty(id, 'text-color', '#7fb58b');
         map.setPaintProperty(id, 'text-halo-color', '#030804');
         map.setPaintProperty(id, 'text-halo-width', 1);
         if (sourceLayer === 'place') {
