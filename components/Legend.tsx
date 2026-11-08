@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import type { LayerType } from '@/lib/types';
+import { LAYER_INFO, SIM_BADGE } from '@/lib/layerInfo';
 
 interface LegendProps {
   activeLayers: Record<LayerType, boolean>;
@@ -12,7 +14,7 @@ const LEGENDS: Record<
   { title: string; unit: string; gradient: string; min: string; max: string; source: string; glowColor: string }
 > = {
   soilTemp: {
-    title: 'TEMPERATURA',
+    title: 'TEMP. SUPERFICIAL',
     unit: '°C',
     gradient: 'linear-gradient(to right, #001aff, #0080ff, #00ffcc, #ffe600, #ff7c00, #ff2d78)',
     min: '<20°C',
@@ -21,12 +23,12 @@ const LEGENDS: Record<
     glowColor: 'var(--neon-orange)',
   },
   traffic: {
-    title: 'FLUJO_VIAL',
+    title: 'FLUJO_VIAL_SIM',
     unit: 'veh/min',
     gradient: 'linear-gradient(to right, #00e5ff, #ffe600, #ff7c00, #ff2d78)',
     min: 'BAJO',
     max: 'PICO',
-    source: 'SIMULACION·OSM',
+    source: 'Vías OSM · perfil horario inventado',
     glowColor: 'var(--neon-cyan)',
   },
   ndvi: {
@@ -41,15 +43,23 @@ const LEGENDS: Record<
 };
 
 export default function Legend({ activeLayers, geeStats }: LegendProps) {
+  const [open, setOpen] = useState(false); // solo móvil: plegada para no tapar el mapa
   const visible = (Object.keys(activeLayers) as LayerType[]).filter((k) => activeLayers[k]);
 
   if (visible.length === 0) return null;
 
   return (
-    <div
-      className="absolute z-40 flex flex-col gap-2 fade-in-up"
-      style={{ bottom: '36px', right: '12px' }}
-    >
+    <div className="legend-wrap fade-in-up" data-open={open}>
+      <button
+        type="button"
+        className="legend-toggle"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-label={open ? 'Ocultar leyenda' : 'Mostrar leyenda'}
+      >
+        {open ? 'Ocultar leyenda' : 'Leyenda'}
+      </button>
+      <div className="legend-panels flex flex-col gap-2">
       {visible.map((layerId) => {
         const leg = LEGENDS[layerId];
         return (
@@ -57,7 +67,8 @@ export default function Legend({ activeLayers, geeStats }: LegendProps) {
             key={layerId}
             className="terminal-panel"
             style={{
-              width: '220px',
+              width: '232px',
+              maxWidth: '100%',
               borderColor: leg.glowColor,
               boxShadow: `0 0 12px ${leg.glowColor}33`,
             }}
@@ -67,7 +78,7 @@ export default function Legend({ activeLayers, geeStats }: LegendProps) {
               <span
                 style={{
                   fontFamily: 'var(--font-pixel)',
-                  fontSize: '6px',
+                  fontSize: '9px',
                   color: leg.glowColor,
                   textShadow: `0 0 8px ${leg.glowColor}`,
                   letterSpacing: '0.04em',
@@ -78,7 +89,7 @@ export default function Legend({ activeLayers, geeStats }: LegendProps) {
               <span
                 style={{
                   fontFamily: 'var(--font-data)',
-                  fontSize: '13px',
+                  fontSize: '16px',
                   color: leg.glowColor,
                   padding: '1px 6px',
                   border: `1px solid ${leg.glowColor}`,
@@ -115,7 +126,7 @@ export default function Legend({ activeLayers, geeStats }: LegendProps) {
                   className="flex justify-between"
                   style={{
                     fontFamily: 'var(--font-mono)',
-                    fontSize: '9px',
+                    fontSize: '12px',
                     color: 'var(--text-muted)',
                   }}
                 >
@@ -130,7 +141,7 @@ export default function Legend({ activeLayers, geeStats }: LegendProps) {
             <div
               style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: '9px',
+                fontSize: '11px',
                 color: 'var(--text-muted)',
                 marginTop: '6px',
                 paddingTop: '5px',
@@ -138,10 +149,15 @@ export default function Legend({ activeLayers, geeStats }: LegendProps) {
               }}
             >
               &gt; {leg.source}
+              {layerId === 'traffic' && (
+                <div style={{ marginTop: '6px' }}><span className="sim-badge">{SIM_BADGE}</span></div>
+              )}
+              {layerId === 'soilTemp' && <div style={{ marginTop: '4px' }}>{LAYER_INFO.soilTemp.note}</div>}
             </div>
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

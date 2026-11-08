@@ -10,6 +10,8 @@ export interface Aoi {
   id:         string;
   label:      string;
   shortLabel: string;  // ≤8 chars, used in compact pill display
+  /** Hemisphere decides which months map to each season (see /api/gee-map). Matches the sign of the AOI latitude. */
+  hemisphere: 'S' | 'N';
   geometry:   GeoJsonPolygon | GeoJsonMultiPolygon;
   zoom:       number;
 }
@@ -17,6 +19,7 @@ export interface Aoi {
 export const AOIS: Aoi[] = [
   {
     id: 'asuncion',
+    hemisphere: 'S',
     label: 'Asunción',
     shortLabel: 'ASU',
     zoom: 12,
@@ -31,6 +34,7 @@ export const AOIS: Aoi[] = [
   },
   {
     id: 'central-py',
+    hemisphere: 'S',
     label: 'Depto. Central',
     shortLabel: 'CENTRAL',
     zoom: 10,
@@ -45,6 +49,7 @@ export const AOIS: Aoi[] = [
   },
   {
     id: 'encarnacion',
+    hemisphere: 'S',
     label: 'Encarnación',
     shortLabel: 'ENCARN.',
     zoom: 13,
@@ -59,6 +64,7 @@ export const AOIS: Aoi[] = [
   },
   {
     id: 'cde',
+    hemisphere: 'S',
     label: 'Ciudad del Este',
     shortLabel: 'CDE',
     zoom: 13,
@@ -73,6 +79,7 @@ export const AOIS: Aoi[] = [
   },
   {
     id: 'buenos-aires',
+    hemisphere: 'S',
     label: 'Buenos Aires',
     shortLabel: 'BUE.AIR',
     zoom: 11,
@@ -87,6 +94,7 @@ export const AOIS: Aoi[] = [
   },
   {
     id: 'rio',
+    hemisphere: 'S',
     label: 'Río de Janeiro',
     shortLabel: 'RIO',
     zoom: 11,
@@ -101,6 +109,7 @@ export const AOIS: Aoi[] = [
   },
   {
     id: 'madrid',
+    hemisphere: 'N',
     label: 'Madrid',
     shortLabel: 'MADRID',
     zoom: 11,
@@ -115,6 +124,7 @@ export const AOIS: Aoi[] = [
   },
   {
     id: 'barcelona',
+    hemisphere: 'N',
     label: 'Barcelona',
     shortLabel: 'BARNA',
     zoom: 12,
@@ -129,6 +139,7 @@ export const AOIS: Aoi[] = [
   },
   {
     id: 'new-york',
+    hemisphere: 'N',
     label: 'New York',
     shortLabel: 'NYC',
     zoom: 11,
@@ -143,6 +154,7 @@ export const AOIS: Aoi[] = [
   },
   {
     id: 'panama',
+    hemisphere: 'N',
     label: 'Panamá City',
     shortLabel: 'PANAMA',
     zoom: 12,
@@ -157,6 +169,7 @@ export const AOIS: Aoi[] = [
   },
   {
     id: 'mexico-df',
+    hemisphere: 'N',
     label: 'Ciudad de México',
     shortLabel: 'MEX.DF',
     zoom: 11,
@@ -171,6 +184,7 @@ export const AOIS: Aoi[] = [
   },
   {
     id: 'paris',
+    hemisphere: 'N',
     label: 'París',
     shortLabel: 'PARIS',
     zoom: 12,
@@ -185,6 +199,7 @@ export const AOIS: Aoi[] = [
   },
   {
     id: 'heidelberg',
+    hemisphere: 'N',
     label: 'Heidelberg',
     shortLabel: 'HEIDELB',
     zoom: 13,
@@ -199,6 +214,7 @@ export const AOIS: Aoi[] = [
   },
   {
     id: 'berlin',
+    hemisphere: 'N',
     label: 'Berlín',
     shortLabel: 'BERLIN',
     zoom: 11,
@@ -213,6 +229,7 @@ export const AOIS: Aoi[] = [
   },
   {
     id: 'roma',
+    hemisphere: 'N',
     label: 'Roma',
     shortLabel: 'ROMA',
     zoom: 12,

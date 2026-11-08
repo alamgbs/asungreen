@@ -20,3 +20,10 @@ export const TRAFFIC_BY_HOUR: number[] = [
   0.55, 0.58, 0.60, 0.65, 0.78, 0.98, // 12-17
   0.92, 0.75, 0.58, 0.40, 0.22, 0.10, // 18-23
 ];
+
+// Fixed colour scale shared by every AOI so zones are visually comparable
+// (no per-AOI percentile stretch). LST is in °C ("soilTemp" id kept for compat).
+export const LAYER_VALUE_RANGE = {
+  ndvi:     { min: -0.2, max: 0.8 },
+  soilTemp: { min: 15,   max: 50 },
+} as const;

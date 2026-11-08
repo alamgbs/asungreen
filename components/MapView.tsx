@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect } from 'react';
 import maplibregl from 'maplibre-gl';
 import { ScatterplotLayer } from '@deck.gl/layers';
 import { Deck } from '@deck.gl/core';
@@ -9,7 +9,7 @@ import { INITIAL_VIEW_STATE } from '@/lib/constants';
 import { initParticles, updateParticles, particleColor, loadCorridors } from '@/lib/trafficSim';
 import type { TrafficParticle } from '@/lib/types';
 import { applyNeonTheme } from '@/lib/mapStyle';
-import { getGeeTileUrl, geeTileUrlCache, geeTileTokenCache } from '@/lib/geeApi';
+import { getGeeTileUrl, geeTileUrlCache } from '@/lib/geeApi';
 import { AOIS, computeBbox } from '@/lib/aois';
 import { shouldUseLocalTile } from '@/lib/tileRouter';
 
@@ -22,13 +22,17 @@ interface MapViewProps {
   activeLayers: Record<LayerType, boolean>;
   hour: number;
   onCoordsChange?: (lat: number, lng: number, zoom: number) => void;
+  /** Vista inicial (de la URL). Si viene, no se auto-encuadra el AOI. */
+  initialView?: { lat: number; lng: number; zoom: number };
+  /** Centro/zoom del mapa tras cada movimiento (para la URL). */
+  onViewChange?: (lat: number, lng: number, zoom: number) => void;
   years: number[];
   seasons: string[];
   selectedAoi: string | null;
   onStatsChange: (layer: 'ndvi' | 'soilTemp', min: number, max: number) => void;
 }
 
-export default function MapView({ activeLayers, hour, onCoordsChange, years, seasons, selectedAoi, onStatsChange }: MapViewProps) {
+export default function MapView({ activeLayers, hour, onCoordsChange, initialView, onViewChange, years, seasons, selectedAoi, onStatsChange }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const deckCanvasRef   = useRef<HTMLCanvasElement>(null);
   const mapRef          = useRef<maplibregl.Map | null>(null);
@@ -37,6 +41,10 @@ export default function MapView({ activeLayers, hour, onCoordsChange, years, sea
   const animFrameRef    = useRef<number>(0);
   const lastTimeRef     = useRef<number>(0);
   const mapReadyRef     = useRef(false);
+  const initialViewRef  = useRef(initialView);
+  const initialAoiRef   = useRef(selectedAoi);
+  const onViewChangeRef = useRef(onViewChange);
+  useEffect(() => { onViewChangeRef.current = onViewChange; }, [onViewChange]);
 
   // ── Initialize MapLibre ─────────────────────────────
   useEffect(() => {
@@ -45,8 +53,10 @@ export default function MapView({ activeLayers, hour, onCoordsChange, years, sea
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: 'https://tiles.openfreemap.org/styles/dark',
-      center: [INITIAL_VIEW_STATE.longitude, INITIAL_VIEW_STATE.latitude],
-      zoom: INITIAL_VIEW_STATE.zoom,
+      center: initialViewRef.current
+        ? [initialViewRef.current.lng, initialViewRef.current.lat]
+        : [INITIAL_VIEW_STATE.longitude, INITIAL_VIEW_STATE.latitude],
+      zoom: initialViewRef.current?.zoom ?? INITIAL_VIEW_STATE.zoom,
       pitch: INITIAL_VIEW_STATE.pitch,
       attributionControl: false,
       // transformRequest intercepts every tile load for env-tile:// URLs.
@@ -61,16 +71,13 @@ export default function MapView({ activeLayers, hour, onCoordsChange, years, sea
         }
 
         const geeBase  = geeTileUrlCache[layer as 'ndvi' | 'soilTemp'];
-        const geeToken = geeTileTokenCache[layer as 'ndvi' | 'soilTemp'];
-        if (!geeBase || !geeToken) {
+        if (!geeBase) {
           // GEE URL not loaded yet — return transparent tile to avoid 404s.
           // refreshGee() will call setTiles() once the URL is ready.
           return { url: TRANSPARENT_TILE };
         }
-        return {
-          url: `${geeBase}/${zi}/${xi}/${yi}`,
-          headers: { Authorization: `Bearer ${geeToken}` },
-        };
+        // Same-origin proxy (/api/gee-tiles) adds the GEE auth server-side.
+        return { url: `${geeBase}/${zi}/${xi}/${yi}` };
       },
     });
 
@@ -124,6 +131,17 @@ export default function MapView({ activeLayers, hour, onCoordsChange, years, sea
 
       mapRef.current = map;
       mapReadyRef.current = true;
+
+      // Enlace con ?aoi= pero sin lat/lng: encuadra la zona al cargar.
+      const aoi0 = AOIS.find((a) => a.id === initialAoiRef.current);
+      if (aoi0 && !initialViewRef.current) {
+        map.fitBounds(computeBbox(aoi0.geometry), { padding: 40, duration: 0 });
+      }
+    });
+
+    map.on('moveend', () => {
+      const c = map.getCenter();
+      onViewChangeRef.current?.(c.lat, c.lng, map.getZoom());
     });
 
     map.on('mousemove', (e) => {
@@ -261,44 +279,42 @@ export default function MapView({ activeLayers, hour, onCoordsChange, years, sea
   }, []);
 
   // ── Animate traffic particles ───────────────────────
-  const animateTraffic = useCallback(
-    (timestamp: number) => {
-      if (!deckRef.current) return;
-      const delta = lastTimeRef.current
-        ? (timestamp - lastTimeRef.current) / 1000
-        : 0.016;
-      lastTimeRef.current = timestamp;
-
-      if (activeLayers.traffic) {
-        particlesRef.current = updateParticles(particlesRef.current, hour, delta);
-        deckRef.current.setProps({
-          layers: [
-            new ScatterplotLayer({
-              id: 'traffic-particles',
-              data: particlesRef.current,
-              getPosition: (d: TrafficParticle) => d.position,
-              getRadius: 4,
-              radiusUnits: 'pixels',
-              getFillColor: particleColor(hour),
-              opacity: 0.9,
-              pickable: false,
-              parameters: { blend: true },
-            }),
-          ],
-        });
-      } else {
-        deckRef.current.setProps({ layers: [] });
-      }
-
-      animFrameRef.current = requestAnimationFrame(animateTraffic);
-    },
-    [activeLayers.traffic, hour]
-  );
+  const trafficRef = useRef({ on: activeLayers.traffic, hour });
+  useEffect(() => { trafficRef.current = { on: activeLayers.traffic, hour }; }, [activeLayers.traffic, hour]);
 
   useEffect(() => {
-    animFrameRef.current = requestAnimationFrame(animateTraffic);
+    const frame = (timestamp: number) => {
+      if (deckRef.current) {
+        const { on, hour: h } = trafficRef.current;
+        const delta = lastTimeRef.current ? (timestamp - lastTimeRef.current) / 1000 : 0.016;
+        lastTimeRef.current = timestamp;
+
+        if (on) {
+          particlesRef.current = updateParticles(particlesRef.current, h, delta);
+          deckRef.current.setProps({
+            layers: [
+              new ScatterplotLayer({
+                id: 'traffic-particles',
+                data: particlesRef.current,
+                getPosition: (d: TrafficParticle) => d.position,
+                getRadius: 4,
+                radiusUnits: 'pixels',
+                getFillColor: particleColor(h),
+                opacity: 0.9,
+                pickable: false,
+                parameters: { blend: true },
+              }),
+            ],
+          });
+        } else {
+          deckRef.current.setProps({ layers: [] });
+        }
+      }
+      animFrameRef.current = requestAnimationFrame(frame);
+    };
+    animFrameRef.current = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [animateTraffic]);
+  }, []);
 
   return (
     <div
