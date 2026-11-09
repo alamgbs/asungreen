@@ -4,7 +4,7 @@
   left: 320px;
   top: 56px;
   /* El TimeSlider ocupa la franja inferior (left 320px, ~200px de alto): se deja libre. */
-  max-height: calc(100vh - 56px - 230px);
+  max-height: calc(100vh - 56px - 262px);
   min-height: 160px;
   width: min(460px, calc(100vw - 340px - 64px));
   z-index: 39;
