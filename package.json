@@ -4,12 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run series:sync && next build",
     "start": "next start",
     "lint": "eslint",
     "series:sync": "node scripts/pipeline/sync-public.mjs",
     "predev": "npm run series:sync",
-    "prebuild": "npm run series:sync",
     "pipeline:open": "node scripts/pipeline/open/run.mjs"
   },
   "dependencies": {
