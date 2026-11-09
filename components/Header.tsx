@@ -21,6 +21,7 @@ export default function Header({ onOpenMethodology }: { onOpenMethodology: () =>
     <header
       className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between gap-2 px-3 md:px-5 scan-lines"
       style={{
+        position: 'absolute', // .scan-lines fuerza relative y dejaba el encabezado detrás del mapa
         height: '48px',
         background: 'rgba(3,8,4,0.96)',
         borderBottom: '1px solid rgba(0,255,136,0.25)',

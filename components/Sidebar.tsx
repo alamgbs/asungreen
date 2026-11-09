@@ -120,38 +120,6 @@ export default function Sidebar({
         {sheetOpen ? <ChevronDown size={18} aria-hidden /> : <ChevronUp size={18} aria-hidden />}
       </button>
 
-      {/* ── System header ──────────────────────────── */}
-      <div className="terminal-panel">
-        <div style={{ ...SECTION_TITLE, marginBottom: 0, color: 'var(--neon-green)', textShadow: 'var(--glow-green)' }}>
-          MAP_LAYERS.SH
-        </div>
-        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
-          DEPT·CENTRAL · ASU · PY
-        </p>
-        <button
-          type="button"
-          className="pill-btn"
-          onClick={onOpenMethodology}
-          style={{ marginTop: '8px', width: '100%', color: 'var(--neon-cyan)', borderColor: 'var(--neon-cyan)' }}
-        >
-          ¿Cómo se calcula?
-        </button>
-      </div>
-
-      {/* ── Zona (selector + buscador) ─────────────── */}
-      <ZonaSelector selectedZona={selectedZona} onZonaChange={onZonaChange} />
-      {onComparar && (
-        <button
-          type="button"
-          className="pill-btn"
-          onClick={onComparar}
-          aria-pressed={!!comparando}
-          style={{ width: '100%', color: 'var(--neon-cyan)', borderColor: 'var(--neon-cyan)', background: comparando ? 'var(--neon-cyan)22' : undefined }}
-        >
-          {comparando ? 'Cerrar comparación' : 'Comparar zonas (2–3)'}
-        </button>
-      )}
-
       {/* ── Layer cards ────────────────────────────── */}
       <div className="flex flex-col gap-1.5">
         {LAYERS.map((layer, i) => {
@@ -260,6 +228,20 @@ export default function Sidebar({
           );
         })}
       </div>
+
+      {/* ── Zona (selector + buscador) ─────────────── */}
+      <ZonaSelector selectedZona={selectedZona} onZonaChange={onZonaChange} />
+      {onComparar && (
+        <button
+          type="button"
+          className="pill-btn"
+          onClick={onComparar}
+          aria-pressed={!!comparando}
+          style={{ width: '100%', color: 'var(--neon-cyan)', borderColor: 'var(--neon-cyan)', background: comparando ? 'var(--neon-cyan)22' : undefined }}
+        >
+          {comparando ? 'Cerrar comparación' : 'Comparar zonas (2–3)'}
+        </button>
+      )}
 
       {/* ── Temporal filter (ndvi / soilTemp only) ─── */}
       {showTemporalFilter && (

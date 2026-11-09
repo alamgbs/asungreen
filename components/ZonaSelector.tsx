@@ -44,6 +44,7 @@ export default function ZonaSelector({ selectedZona, onZonaChange }: Props) {
   const [filtro, setFiltro] = useState<'todos' | NivelZona>('todos');
   const [abierto, setAbierto] = useState(false);
   const [activo, setActivo] = useState(0);
+  const [mas, setMas] = useState(false);
 
   const resultados = useMemo(
     () => buscarZonas(q, { niveles: filtro === 'todos' ? undefined : [filtro], limite: 8 }),
@@ -147,6 +148,18 @@ export default function ZonaSelector({ selectedZona, onZonaChange }: Props) {
         )}
       </div>
 
+      <button
+        type="button"
+        className="pill-btn"
+        aria-expanded={mas}
+        aria-controls={`${uid}-mas`}
+        onClick={() => setMas((v) => !v)}
+        style={{ width: '100%', marginTop: '8px', fontSize: '12px' }}
+      >
+        {mas ? 'Menos opciones ▴' : 'Ciudades de referencia y filtros ▾'}
+      </button>
+      {mas && (
+        <div id={`${uid}-mas`}>
       {/* Filtro por nivel */}
       <div className="flex gap-1.5 flex-wrap" role="group" aria-label="Filtrar búsqueda por nivel" style={{ marginTop: '8px' }}>
         {FILTROS.map((f) => (
@@ -182,6 +195,8 @@ export default function ZonaSelector({ selectedZona, onZonaChange }: Props) {
       <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
         Límites reales (geoBoundaries 2012 y OpenStreetMap), simplificados para el mapa. Faltan 18 distritos que figuran en listados más recientes (docs/zonas.md).
       </p>
+        </div>
+      )}
     </div>
   );
 }
