@@ -86,6 +86,10 @@ const constant = (v: unknown): GeeValue => ({ constantValue: v });
 const invoke = (fn: string, args: Record<string, GeeValue>): GeeValue =>
   ({ functionInvocationValue: { functionName: fn, arguments: args } });
 const arr = (values: GeeValue[]): GeeValue => ({ arrayValue: { values } });
+/** GeoJSON Polygon/MultiPolygon → nodo de la API REST (no existe el campo `geoJsonGeometry`). */
+const geom = (g: { type: string; coordinates: unknown }): GeeValue =>
+  invoke(g.type === 'MultiPolygon' ? 'GeometryConstructors.MultiPolygon' : 'GeometryConstructors.Polygon',
+    { coordinates: constant(g.coordinates), geodesic: constant(false) });
 const imgConst = (v: number): GeeValue => invoke('Image.constant', { value: constant(v) });
 
 /** Builds a Collection.map(img => body(img)) node. The body is stored as a named value in `values`. */
@@ -246,10 +250,8 @@ async function createMap(
   const range = LAYER_VALUE_RANGE[layer];
 
   // Probe region: the AOI, or a small box in Asunción when no AOI is active.
-  const geometry: GeeValue | undefined = aoi ? { geoJsonGeometry: aoi.geometry } : undefined;
-  const probeGeom: GeeValue = geometry ?? {
-    geoJsonGeometry: { type: 'Polygon', coordinates: [[[-57.6, -25.35], [-57.5, -25.35], [-57.5, -25.25], [-57.6, -25.25], [-57.6, -25.35]]] },
-  };
+  const geometry: GeeValue | undefined = aoi ? geom(aoi.geometry) : undefined;
+  const probeGeom: GeeValue = geometry ?? geom({ type: 'Polygon', coordinates: [[[-57.6, -25.35], [-57.5, -25.35], [-57.5, -25.25], [-57.6, -25.25], [-57.6, -25.35]]] });
   // Throws if any function in the (masked) expression is unsupported → caller falls back.
   const mean = await computeMean(token, projectId, image, probeGeom, values);
 

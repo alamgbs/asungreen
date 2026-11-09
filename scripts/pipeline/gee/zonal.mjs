@@ -35,7 +35,7 @@ const REDUCTOR = inv('Reducer.combine', {
 export async function estadisticasLote(sa, comp, lote) {
   const values = { ...comp.values };
   const nodos = lote.map((z) => inv('Image.reduceRegion', {
-    input: comp.image, reducer: REDUCTOR, geometry: { geoJsonGeometry: z.geometry },
+    input: comp.image, reducer: REDUCTOR, geometry: { functionInvocationValue: { functionName: z.geometry.type === 'MultiPolygon' ? 'GeometryConstructors.MultiPolygon' : 'GeometryConstructors.Polygon', arguments: { coordinates: { constantValue: z.geometry.coordinates }, geodesic: { constantValue: false } } } },
     scale: c(z.escala), bestEffort: c(true), maxPixels: c(1e9),
   }));
   values.result = arr(nodos);
