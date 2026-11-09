@@ -89,7 +89,7 @@ const arr = (values: GeeValue[]): GeeValue => ({ arrayValue: { values } });
 /** GeoJSON Polygon/MultiPolygon → nodo de la API REST (no existe el campo `geoJsonGeometry`). */
 const geom = (g: { type: string; coordinates: unknown }): GeeValue =>
   invoke(g.type === 'MultiPolygon' ? 'GeometryConstructors.MultiPolygon' : 'GeometryConstructors.Polygon',
-    { coordinates: constant(g.coordinates), geodesic: constant(false), evenOdd: constant(true), maxError: constant(1) });
+    { coordinates: constant(g.coordinates), geodesic: constant(false), evenOdd: constant(true) });
 const imgConst = (v: number): GeeValue => invoke('Image.constant', { value: constant(v) });
 
 /** Builds a Collection.map(img => body(img)) node. The body is stored as a named value in `values`. */
