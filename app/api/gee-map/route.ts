@@ -221,7 +221,7 @@ async function computeMean(
     values: {
       ...values,
       result: invoke('Image.reduceRegion', {
-        input: invoke('Image.clip', { input: image, geometry }), // reduceRegion takes 'input' (verified by earlier working code)
+        image: invoke('Image.clip', { input: image, geometry }),
         reducer: invoke('Reducer.mean', {}),
         geometry,
         scale: constant(1000),
