@@ -48,5 +48,4 @@ next-env.d.ts
 /data/zonas/raw/
 
 # series servidas estáticas: copia generada de data/series (npm run series:sync)
-/public/series/
 /scripts/pipeline/.cache/
